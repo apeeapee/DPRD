@@ -5,6 +5,68 @@
 @section('page_subtitle', 'Peta wilayah + perolehan suara partai & calon')
 
 @section('content')
+<div class="kpi-grid" style="margin-bottom:14px;">
+  <div class="card kpi-card">
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+      <div>
+        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Total Suara Masuk</div>
+        <div style="font-weight:900; margin-top:4px;">Akumulasi wilayah terpilih</div>
+      </div>
+      <div class="kpi-icon kpi-icon--blue">▦</div>
+    </div>
+    <div style="font-weight:900; font-size:34px; letter-spacing:.4px; margin-top:14px;" id="kpiTotalVotes">0</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <span class="chip" id="kpiDelta">+0%</span>
+      <span class="muted" id="kpiDeltaText">vs update sebelumnya</span>
+    </div>
+  </div>
+
+  <div class="card kpi-card">
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+      <div>
+        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Progress Data Masuk</div>
+        <div style="font-weight:900; margin-top:4px;">Suara masuk / DPT</div>
+      </div>
+      <div class="kpi-icon kpi-icon--green">✓</div>
+    </div>
+    <div style="font-weight:900; font-size:34px; letter-spacing:.4px; margin-top:14px;" id="kpiProgress">0%</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <span class="chip">Update berkala</span>
+      <span class="muted">target 100%</span>
+    </div>
+  </div>
+
+  <div class="card kpi-card">
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+      <div>
+        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Partai Tertinggi</div>
+        <div style="font-weight:900; margin-top:4px;">Suara terbanyak</div>
+      </div>
+      <div class="kpi-icon kpi-icon--amber">⚑</div>
+    </div>
+    <div style="font-weight:900; font-size:34px; letter-spacing:.4px; margin-top:14px;" id="kpiTopParty">—</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <span class="chip" id="kpiTopPartyRank">#1</span>
+      <span class="muted" id="kpiTopPartyScope">wilayah terpilih</span>
+    </div>
+  </div>
+
+  <div class="card kpi-card">
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+      <div>
+        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Calon Tertinggi</div>
+        <div style="font-weight:900; margin-top:4px;">Top calon (by suara)</div>
+      </div>
+      <div class="kpi-icon kpi-icon--rose">👤</div>
+    </div>
+    <div style="font-weight:900; font-size:28px; letter-spacing:.2px; margin-top:14px; line-height:1.15;" id="kpiTopCandidate">—</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <span class="chip" id="kpiTopCandidateBadge">Top</span>
+      <span class="muted">wilayah terpilih</span>
+    </div>
+  </div>
+</div>
+
 <div class="grid">
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -62,6 +124,36 @@
 
 @push('styles')
 <style>
+  .kpi-grid{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .kpi-card{ min-height: 170px; }
+  .kpi-icon{
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight: 900;
+    color: var(--text);
+  }
+  .kpi-icon--blue{ background: rgba(37,99,235,.16); border-color: rgba(37,99,235,.22); }
+  .kpi-icon--green{ background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.22); }
+  .kpi-icon--amber{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+  .kpi-icon--rose{ background: rgba(244,63,94,.14); border-color: rgba(244,63,94,.22); }
+
+  @media (max-width: 1200px){
+    .kpi-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px){
+    .kpi-grid{ grid-template-columns: 1fr; }
+  }
+
   /* Marker + popup style (mendekati referensi KPU) */
   .area-marker__dot{
     width: var(--s, 18px);
@@ -85,7 +177,7 @@
     border: 0;
     border-radius: 10px;
     padding: 8px 10px;
-    background: #f97316;
+    background: var(--accent);
     color: #fff;
     font-weight: 700;
     cursor: pointer;
@@ -112,12 +204,20 @@
 <script>
   const fmt = new Intl.NumberFormat('id-ID');
 
-  const yearSelect = document.getElementById('yearSelect');
+  const DEFAULT_YEAR = 2024;
+
   const areaName = document.getElementById('areaName');
   const areaType = document.getElementById('areaType');
   const kpiRegistered = document.getElementById('kpiRegistered');
   const kpiVotesCast = document.getElementById('kpiVotesCast');
   const candidateTable = document.getElementById('candidateTable');
+
+  const kpiTotalVotes = document.getElementById('kpiTotalVotes');
+  const kpiDelta = document.getElementById('kpiDelta');
+  const kpiProgress = document.getElementById('kpiProgress');
+  const kpiTopParty = document.getElementById('kpiTopParty');
+  const kpiTopPartyRank = document.getElementById('kpiTopPartyRank');
+  const kpiTopCandidate = document.getElementById('kpiTopCandidate');
 
   // Map init - fokus hanya 3 kabupaten
   const TARGET_REGENCIES = [
@@ -173,6 +273,7 @@
   // featureGroup punya getBounds() => bisa fit ke marker yang tampil
   let markersLayer = L.featureGroup().addTo(map);
   let areasGeoLayer;
+  let lastAreas = [];
 
   function escapeHtml(str) {
     return String(str ?? '')
@@ -383,7 +484,7 @@
   }
 
   async function loadAreas() {
-    const year = yearSelect.value;
+    const year = DEFAULT_YEAR;
     clearAreaLayers();
 
     const res = await fetch(`/api/areas?year=${encodeURIComponent(year)}`);
@@ -396,6 +497,8 @@
       )
     );
 
+    lastAreas = areas;
+
     // 1) Coba load batas kab/kota (GeoJSON) lalu render choropleth.
     // Simpan file GeoJSON di: public/geo/jateng_kabkota.geojson
     try {
@@ -404,6 +507,7 @@
       const geo = await geoRes.json();
       if (!geo?.features?.length) throw new Error('GeoJSON kosong');
       renderChoropleth(geo, areas);
+      if (areas[0]?.id) await loadAreaDetail(areas[0].id);
       return;
     } catch (err) {
       console.warn('Gagal load GeoJSON, fallback ke marker:', err);
@@ -449,18 +553,30 @@
         lockMinZoomToBounds(b);
       }
     } catch (_) {}
+
+    if (areas[0]?.id) await loadAreaDetail(areas[0].id);
   }
 
   async function loadAreaDetail(areaId) {
-    const year = yearSelect.value;
+    const year = DEFAULT_YEAR;
 
     const res = await fetch(`/api/areas/${areaId}?year=${encodeURIComponent(year)}`);
     const json = await res.json();
 
     areaName.textContent = json.area?.name ?? '—';
     areaType.textContent = json.area?.type ?? '—';
-    kpiRegistered.textContent = fmt.format(json.summary?.registered_voters ?? 0);
-    kpiVotesCast.textContent = fmt.format(json.summary?.votes_cast ?? 0);
+    const registered = Number(json.summary?.registered_voters ?? 0);
+    const votesCast = Number(json.summary?.votes_cast ?? 0);
+
+    kpiRegistered.textContent = fmt.format(registered);
+    kpiVotesCast.textContent = fmt.format(votesCast);
+
+    if (kpiTotalVotes) kpiTotalVotes.textContent = fmt.format(votesCast);
+    if (kpiDelta) kpiDelta.textContent = '+0%';
+    if (kpiProgress) {
+      const pct = registered > 0 ? Math.round((votesCast / registered) * 100) : 0;
+      kpiProgress.textContent = `${Math.max(0, Math.min(100, pct))}%`;
+    }
 
     // Party chart
     const pr = json.party_results || [];
@@ -468,11 +584,28 @@
     partyChart.data.datasets[0].data = pr.map(x => x.votes);
     partyChart.update();
 
+    // Top party
+    if (kpiTopParty) {
+      const topParty = pr.reduce((acc, cur) => {
+        if (!acc) return cur;
+        return (Number(cur.votes ?? 0) > Number(acc.votes ?? 0)) ? cur : acc;
+      }, null);
+      kpiTopParty.textContent = topParty?.party_name ?? '—';
+      if (kpiTopPartyRank) kpiTopPartyRank.textContent = '#1';
+    }
+
     // Candidate table (Top 10)
     const cr = (json.candidate_results || []).slice(0, 10);
     if (cr.length === 0) {
       candidateTable.innerHTML = `<tr><td colspan="3" class="muted">Tidak ada data calon.</td></tr>`;
+      if (kpiTopCandidate) kpiTopCandidate.textContent = '—';
       return;
+    }
+
+    // Top candidate
+    if (kpiTopCandidate) {
+      const top = cr[0];
+      kpiTopCandidate.textContent = top?.candidate_name ?? '—';
     }
     candidateTable.innerHTML = cr.map(r => `
       <tr>
@@ -482,19 +615,6 @@
       </tr>
     `).join('');
   }
-
-  yearSelect.addEventListener('change', () => {
-    loadAreas();
-    // reset kanan
-    areaName.textContent = 'Pilih wilayah';
-    areaType.textContent = '—';
-    kpiRegistered.textContent = '0';
-    kpiVotesCast.textContent = '0';
-    partyChart.data.labels = [];
-    partyChart.data.datasets[0].data = [];
-    partyChart.update();
-    candidateTable.innerHTML = `<tr><td colspan="3" class="muted">Klik wilayah dulu…</td></tr>`;
-  });
 
   // start
   loadAreas();

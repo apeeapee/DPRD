@@ -9,6 +9,7 @@
 
   <style>
     :root{
+      /* Dashboard tone (bright) */
       --bg: #f6f8fc;
       --surface: rgba(255,255,255,.86);
       --card: #ffffff;
@@ -116,6 +117,71 @@
     }
     select:focus{ border-color: rgba(37, 99, 235, .35); box-shadow: 0 0 0 4px rgba(37, 99, 235, .12); }
 
+    input[type="text"], input[type="search"], input[type="number"]{
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+      color: var(--text);
+      outline: none;
+    }
+    input[type="text"]:focus, input[type="search"]:focus, input[type="number"]:focus{
+      border-color: rgba(37, 99, 235, .35);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, .12);
+    }
+
+    .btn{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(2, 6, 23, .03);
+      color: var(--text);
+      padding: 9px 12px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform .12s ease, filter .12s ease, background .12s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:hover{ filter: brightness(1.06); transform: translateY(-1px); }
+    .btn:active{ transform: translateY(0px); }
+    .btn--primary{ background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.18); }
+    .btn--danger{ background: rgba(185,28,28,.10); border-color: rgba(185,28,28,.18); }
+    .btn--ghost{ background: rgba(2, 6, 23, .02); }
+    .btn--muted{ color: var(--muted); font-weight: 700; }
+
+    .toolbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .filters{
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+      flex-wrap:wrap;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(2, 6, 23, .03);
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: .25px;
+    }
+
     table{ width:100%; border-collapse: separate; border-spacing: 0; }
     thead th{
       position: sticky;
@@ -166,14 +232,15 @@
       @auth
         @if(auth()->user()->is_admin)
           <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
+          <a href="{{ route('admin.village-votes.index') }}">Suara Masuk Desa</a>
         @else
           <a href="{{ route('user.dashboard') }}">Dashboard User</a>
+          <a href="{{ route('village-votes') }}">Suara Masuk Desa</a>
         @endif
-        <a href="{{ route('village-votes') }}">Suara Masuk Desa</a>
         <div style="height:10px"></div>
         <form method="POST" action="{{ route('logout') }}">
           @csrf
-          <button type="submit" style="width:100%; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color: rgba(226,232,240,.92); padding:10px 10px; border-radius:12px; font-weight:700; cursor:pointer;">Logout</button>
+          <button type="submit" style="width:100%; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color: rgba(226,232,240,.92); padding:10px 10px; border-radius:12px; font-weight:800; cursor:pointer;">Logout</button>
         </form>
       @else
         <a href="{{ route('login') }}">Login</a>
@@ -183,15 +250,18 @@
     <main class="main">
       <div class="topbar">
         <div>
-          <div style="font-weight:700; font-size:18px;">@yield('page_title','Dashboard')</div>
-          <div class="muted">@yield('page_subtitle','Visualisasi ringkasan & hasil per wilayah')</div>
+          <div style="font-weight:800; font-size:18px; letter-spacing:.2px;">@yield('page_title','Dashboard')</div>
+          <div class="muted" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px;">
+            <span>@yield('page_subtitle','Visualisasi ringkasan & hasil per wilayah')</span>
+            <span class="chip">Update: {{ now()->format('d M Y, H:i') }}</span>
+          </div>
         </div>
 
-        <div class="card" style="padding:10px 12px;">
-          Tahun:
-          <select id="yearSelect">
-            <option value="2024">2024</option>
-          </select>
+        <div class="toolbar">
+          <input type="search" placeholder="Cari kabupaten/kecamatan/desa, partai, caleg" style="min-width: 340px;" />
+          <a class="btn btn--ghost" href="#" onclick="return false;">Export Excel</a>
+          <a class="btn btn--ghost" href="#" onclick="return false;">Export PDF</a>
+          <button class="btn btn--primary" type="button" onclick="window.location.reload();">Refresh</button>
         </div>
       </div>
 

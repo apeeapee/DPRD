@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
             AreaSeeder::class,
             PartySeeder::class,
             DummyResultsSeeder::class,
+            VillageDummySeeder::class,
+            TpsDummySeeder::class,
         ]);
     }
 }
