@@ -119,27 +119,41 @@
   const kpiVotesCast = document.getElementById('kpiVotesCast');
   const candidateTable = document.getElementById('candidateTable');
 
-  // Map init (dibatasi Jawa Tengah)
-  // Catatan: ini bounding box kasar Jateng supaya peta tidak bisa keluar area.
-  const JATENG_BOUNDS = L.latLngBounds(
-    [-8.90, 108.60],
-    [-5.55, 111.95]
+  // Map init - fokus hanya 3 kabupaten
+  const TARGET_REGENCIES = [
+    'Kabupaten Karanganyar',
+    'Kabupaten Sragen',
+    'Kabupaten Wonogiri',
+  ];
+
+  // Bounding box sekitar Karanganyar, Sragen, Wonogiri
+  const MAP_BOUNDS = L.latLngBounds(
+    [-8.10, 110.70],
+    [-7.20, 111.35]
   );
 
   const map = L.map('map', {
-    maxBounds: JATENG_BOUNDS,
+    maxBounds: MAP_BOUNDS,
     maxBoundsViscosity: 1.0,
-    minZoom: 8
+    minZoom: 9
   });
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
-    minZoom: 8,
-    bounds: JATENG_BOUNDS,
+    minZoom: 9,
     noWrap: true
   }).addTo(map);
 
-  map.fitBounds(JATENG_BOUNDS);
+  function lockMinZoomToBounds(bounds) {
+    // Kunci zoom-out agar tidak melebar keluar area target.
+    const z = map.getBoundsZoom(bounds, false, [12, 12]);
+    if (Number.isFinite(z)) {
+      map.setMinZoom(Math.max(map.getMinZoom() ?? 0, z));
+    }
+  }
+
+  map.fitBounds(MAP_BOUNDS, { padding: [12, 12] });
+  lockMinZoomToBounds(MAP_BOUNDS);
 
   let partyChart;
   function initPartyChart() {
@@ -156,7 +170,8 @@
   }
   initPartyChart();
 
-  let markersLayer = L.layerGroup().addTo(map);
+  // featureGroup punya getBounds() => bisa fit ke marker yang tampil
+  let markersLayer = L.featureGroup().addTo(map);
   let areasGeoLayer;
 
   function escapeHtml(str) {
@@ -298,6 +313,14 @@
       byName.set(normalizeAreaName(a.name), a);
     });
 
+    // Filter GeoJSON hanya untuk 3 kabupaten target
+    const filteredFeatures = (geojson?.features || []).filter(feature => {
+      const rawName = getFeatureName(feature?.properties);
+      return TARGET_REGENCIES.some(target =>
+        normalizeAreaName(rawName) === normalizeAreaName(target)
+      );
+    });
+
     const baseStyle = (feature) => {
       const nm = normalizeAreaName(getFeatureName(feature?.properties));
       const a = byName.get(nm);
@@ -317,7 +340,7 @@
       fillOpacity: 0.95,
     };
 
-    areasGeoLayer = L.geoJSON(geojson, {
+    areasGeoLayer = L.geoJSON({ type: 'FeatureCollection', features: filteredFeatures }, {
       style: baseStyle,
       onEachFeature: (feature, layer) => {
         const rawName = getFeatureName(feature?.properties);
@@ -349,10 +372,13 @@
       }
     }).addTo(map);
 
-    // Fit ke batas layer, tetap dibatasi maxBounds Jateng
+    // Fit ke batas layer
     try {
       const b = areasGeoLayer.getBounds();
-      if (b.isValid()) map.fitBounds(b, { padding: [12, 12] });
+      if (b.isValid()) {
+        map.fitBounds(b, { padding: [12, 12] });
+        lockMinZoomToBounds(b);
+      }
     } catch (_) {}
   }
 
@@ -363,7 +389,12 @@
     const res = await fetch(`/api/areas?year=${encodeURIComponent(year)}`);
     const json = await res.json();
 
-    const areas = json.data || [];
+    // Filter hanya 3 kabupaten target
+    const areas = (json.data || []).filter(a =>
+      TARGET_REGENCIES.some(target =>
+        normalizeAreaName(a.name) === normalizeAreaName(target)
+      )
+    );
 
     // 1) Coba load batas kab/kota (GeoJSON) lalu render choropleth.
     // Simpan file GeoJSON di: public/geo/jateng_kabkota.geojson
@@ -380,8 +411,8 @@
 
     // 2) Fallback marker jika GeoJSON belum tersedia
     areas.forEach(a => {
-      const lat = a.lat ?? -7.1;
-      const lng = a.lng ?? 110.2;
+      const lat = a.lat ?? a.latitude ?? -7.1;
+      const lng = a.lng ?? a.longitude ?? 110.2;
 
       const dpt = a.summary?.registered_voters ?? 0;
       const votesCast = a.summary?.votes_cast ?? 0;
@@ -409,6 +440,15 @@
         </div>
       `, { closeButton: true, autoPan: true });
     });
+
+    // Fit ke marker yang tampil lalu lock minZoom
+    try {
+      const b = markersLayer.getBounds();
+      if (b.isValid()) {
+        map.fitBounds(b, { padding: [12, 12] });
+        lockMinZoomToBounds(b);
+      }
+    } catch (_) {}
   }
 
   async function loadAreaDetail(areaId) {

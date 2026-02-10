@@ -163,7 +163,21 @@
       <h2>Dashboard Pemilu DPRD</h2>
       <div class="muted">Jawa Tengah</div>
       <div style="height:12px"></div>
-      <a href="{{ route('dashboard') }}">Dashboard</a>
+      @auth
+        @if(auth()->user()->is_admin)
+          <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
+        @else
+          <a href="{{ route('user.dashboard') }}">Dashboard User</a>
+        @endif
+        <a href="{{ route('village-votes') }}">Suara Masuk Desa</a>
+        <div style="height:10px"></div>
+        <form method="POST" action="{{ route('logout') }}">
+          @csrf
+          <button type="submit" style="width:100%; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color: rgba(226,232,240,.92); padding:10px 10px; border-radius:12px; font-weight:700; cursor:pointer;">Logout</button>
+        </form>
+      @else
+        <a href="{{ route('login') }}">Login</a>
+      @endauth
     </aside>
 
     <main class="main">
