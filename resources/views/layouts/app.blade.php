@@ -80,10 +80,18 @@
     .topbar{
       display:flex;
       justify-content:space-between;
-      align-items:center;
+      align-items:flex-start;
       gap: 14px;
       margin-bottom: 14px;
     }
+
+    .topbar__left{ flex: 1; min-width: 280px; }
+    .topbar__title{ font-weight:800; font-size:22px; letter-spacing:.2px; line-height: 1.2; }
+    .topbar__meta{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+
+    .topbar__right{ flex: 1; display:flex; justify-content:flex-end; }
+    .toolbar{ width:100%; justify-content:flex-end; }
+    .toolbar input[type="search"]{ flex: 1; min-width: 260px; max-width: 620px; }
 
     .card{
       background: var(--card);
@@ -217,53 +225,67 @@
       .sidebar{ width:auto; border-right:0; border-bottom: 1px solid rgba(255,255,255,.08); }
       .grid{ grid-template-columns: 1fr; }
       #map{ height: 460px; }
-      .topbar{ flex-direction: column; align-items: flex-start; }
+      .topbar{ flex-direction: column; align-items: stretch; }
+      .topbar__right{ justify-content:flex-start; }
+      .toolbar{ justify-content:flex-start; }
+      .toolbar input[type="search"]{ max-width: 100%; }
     }
   </style>
 
   @stack('styles')
 </head>
 <body>
+  @php
+    $hideSidebar = trim($__env->yieldContent('hide_sidebar')) === '1';
+    $hideTopbar = trim($__env->yieldContent('hide_topbar')) === '1';
+  @endphp
   <div class="wrap">
-    <aside class="sidebar">
-      <h2>Dashboard Pemilu DPRD</h2>
-      <div class="muted">Jawa Tengah</div>
-      <div style="height:12px"></div>
-      @auth
-        @if(auth()->user()->is_admin)
-          <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
-          <a href="{{ route('admin.village-votes.index') }}">Suara Masuk Desa</a>
+    @unless($hideSidebar)
+      <aside class="sidebar">
+        <h2>Dashboard Pemilu DPRD</h2>
+        <div class="muted">Jawa Tengah</div>
+        <div style="height:12px"></div>
+        @auth
+          @if(auth()->user()->is_admin)
+            <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
+            <a href="{{ route('admin.village-votes.index') }}">Suara Masuk Desa</a>
+            <a href="{{ route('admin.candidates.index') }}">Data Calon</a>
+            <a href="{{ route('admin.parties.index') }}">Data Partai</a>
+          @else
+            <a href="{{ route('user.dashboard') }}">Dashboard</a>
+          @endif
+          <div style="height:10px"></div>
+          <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" style="width:100%; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color: rgba(226,232,240,.92); padding:10px 10px; border-radius:12px; font-weight:800; cursor:pointer;">Logout</button>
+          </form>
         @else
-          <a href="{{ route('user.dashboard') }}">Dashboard User</a>
-          <a href="{{ route('village-votes') }}">Suara Masuk Desa</a>
-        @endif
-        <div style="height:10px"></div>
-        <form method="POST" action="{{ route('logout') }}">
-          @csrf
-          <button type="submit" style="width:100%; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color: rgba(226,232,240,.92); padding:10px 10px; border-radius:12px; font-weight:800; cursor:pointer;">Logout</button>
-        </form>
-      @else
-        <a href="{{ route('login') }}">Login</a>
-      @endauth
-    </aside>
+          <a href="{{ route('login') }}">Login</a>
+        @endauth
+      </aside>
+    @endunless
 
     <main class="main">
-      <div class="topbar">
-        <div>
-          <div style="font-weight:800; font-size:18px; letter-spacing:.2px;">@yield('page_title','Dashboard')</div>
-          <div class="muted" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px;">
-            <span>@yield('page_subtitle','Visualisasi ringkasan & hasil per wilayah')</span>
-            <span class="chip">Update: {{ now()->format('d M Y, H:i') }}</span>
+      @unless($hideTopbar)
+        <div class="topbar">
+          <div class="topbar__left">
+            <div class="topbar__title">@yield('page_title','Dashboard')</div>
+            <div class="muted topbar__meta">
+              <span>@yield('page_subtitle','Visualisasi ringkasan & hasil per wilayah')</span>
+              <span class="chip">Update: {{ now()->format('d M Y, H:i') }}</span>
+            </div>
+          </div>
+
+          <div class="topbar__right">
+            <div class="toolbar">
+              <input type="search" placeholder="Cari kabupaten/kecamatan/desa, partai, caleg" />
+              <a class="btn btn--ghost" href="#" onclick="return false;">Export Excel</a>
+              <a class="btn btn--ghost" href="#" onclick="return false;">Export PDF</a>
+              <button class="btn btn--primary" type="button" onclick="window.location.reload();">Refresh</button>
+            </div>
           </div>
         </div>
-
-        <div class="toolbar">
-          <input type="search" placeholder="Cari kabupaten/kecamatan/desa, partai, caleg" style="min-width: 340px;" />
-          <a class="btn btn--ghost" href="#" onclick="return false;">Export Excel</a>
-          <a class="btn btn--ghost" href="#" onclick="return false;">Export PDF</a>
-          <button class="btn btn--primary" type="button" onclick="window.location.reload();">Refresh</button>
-        </div>
-      </div>
+      @endunless
 
       @yield('content')
     </main>

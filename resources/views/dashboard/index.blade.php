@@ -9,12 +9,12 @@
   <div class="card kpi-card">
     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
       <div>
-        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Total Suara Masuk</div>
-        <div style="font-weight:900; margin-top:4px;">Akumulasi wilayah terpilih</div>
+        <div class="muted kpi-kicker">Total Suara Masuk</div>
+        <div class="kpi-title">Akumulasi wilayah terpilih</div>
       </div>
       <div class="kpi-icon kpi-icon--blue">▦</div>
     </div>
-    <div style="font-weight:900; font-size:34px; letter-spacing:.4px; margin-top:14px;" id="kpiTotalVotes">0</div>
+    <div class="kpi-value" id="kpiTotalVotes">0</div>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <span class="chip" id="kpiDelta">+0%</span>
       <span class="muted" id="kpiDeltaText">vs update sebelumnya</span>
@@ -24,12 +24,12 @@
   <div class="card kpi-card">
     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
       <div>
-        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Progress Data Masuk</div>
-        <div style="font-weight:900; margin-top:4px;">Suara masuk / DPT</div>
+        <div class="muted kpi-kicker">Progress Data Masuk</div>
+        <div class="kpi-title">Suara masuk / DPT</div>
       </div>
       <div class="kpi-icon kpi-icon--green">✓</div>
     </div>
-    <div style="font-weight:900; font-size:34px; letter-spacing:.4px; margin-top:14px;" id="kpiProgress">0%</div>
+    <div class="kpi-value" id="kpiProgress">0%</div>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <span class="chip">Update berkala</span>
       <span class="muted">target 100%</span>
@@ -39,12 +39,12 @@
   <div class="card kpi-card">
     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
       <div>
-        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Partai Tertinggi</div>
-        <div style="font-weight:900; margin-top:4px;">Suara terbanyak</div>
+        <div class="muted kpi-kicker">Partai Tertinggi</div>
+        <div class="kpi-title">Suara terbanyak</div>
       </div>
       <div class="kpi-icon kpi-icon--amber">⚑</div>
     </div>
-    <div style="font-weight:900; font-size:34px; letter-spacing:.4px; margin-top:14px;" id="kpiTopParty">—</div>
+    <div class="kpi-value" id="kpiTopParty">—</div>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <span class="chip" id="kpiTopPartyRank">#1</span>
       <span class="muted" id="kpiTopPartyScope">wilayah terpilih</span>
@@ -54,12 +54,12 @@
   <div class="card kpi-card">
     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
       <div>
-        <div class="muted" style="font-weight:800; letter-spacing:.2px;">Calon Tertinggi</div>
-        <div style="font-weight:900; margin-top:4px;">Top calon (by suara)</div>
+        <div class="muted kpi-kicker">Calon Tertinggi</div>
+        <div class="kpi-title">Top calon (by suara)</div>
       </div>
       <div class="kpi-icon kpi-icon--rose">👤</div>
     </div>
-    <div style="font-weight:900; font-size:28px; letter-spacing:.2px; margin-top:14px; line-height:1.15;" id="kpiTopCandidate">—</div>
+    <div class="kpi-value kpi-value--compact" id="kpiTopCandidate">—</div>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <span class="chip" id="kpiTopCandidateBadge">Top</span>
       <span class="muted">wilayah terpilih</span>
@@ -129,7 +129,31 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
   }
-  .kpi-card{ min-height: 170px; }
+  .kpi-card{ min-height: 160px; }
+
+  .kpi-kicker{
+    font-weight: 800;
+    letter-spacing: .2px;
+    font-size: 12px;
+  }
+  .kpi-title{
+    font-weight: 900;
+    margin-top: 4px;
+    font-size: 16px;
+    line-height: 1.25;
+  }
+  .kpi-value{
+    font-weight: 950;
+    font-size: 30px;
+    letter-spacing: .2px;
+    margin-top: 14px;
+    line-height: 1.1;
+  }
+  .kpi-value--compact{
+    font-size: 22px;
+    letter-spacing: .1px;
+    line-height: 1.15;
+  }
   .kpi-icon{
     width: 44px;
     height: 44px;

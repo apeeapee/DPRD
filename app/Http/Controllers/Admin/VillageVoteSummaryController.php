@@ -8,7 +8,6 @@ use App\Models\Subdistrict;
 use App\Models\Village;
 use App\Models\VillageVoteSummary;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class VillageVoteSummaryController extends Controller
 {
@@ -43,34 +42,6 @@ class VillageVoteSummaryController extends Controller
                 ->get(['id', 'subdistrict_id', 'name']);
         }
 
-        $rows = Village::query()
-            ->join('subdistricts', 'subdistricts.id', '=', 'villages.subdistrict_id')
-            ->leftJoin('village_vote_summaries as vvs', function ($join) use ($electionYear) {
-                if ($electionYear) {
-                    $join->on('vvs.village_id', '=', 'villages.id')
-                        ->where('vvs.election_year_id', '=', $electionYear->id);
-                } else {
-                    $join->on('vvs.village_id', '=', 'villages.id');
-                }
-            })
-            ->whereIn('subdistricts.regency_name', $targetRegencies)
-            ->when($subdistrictId, fn ($q) => $q->where('villages.subdistrict_id', $subdistrictId))
-            ->when($villageId, fn ($q) => $q->where('villages.id', $villageId))
-            ->orderBy('subdistricts.regency_name')
-            ->orderBy('subdistricts.name')
-            ->orderBy('villages.name')
-            ->select([
-                DB::raw('COALESCE(vvs.id, 0) as vote_id'),
-                'villages.id as village_id',
-                'villages.name as village_name',
-                'subdistricts.id as subdistrict_id',
-                'subdistricts.name as subdistrict_name',
-                'subdistricts.regency_name as regency_name',
-                DB::raw('COALESCE(vvs.votes_cast, 0) as votes_cast'),
-            ])
-            ->paginate(20)
-            ->withQueryString();
-
         return view('admin/village-votes/index', [
             'year' => $electionYear?->year ?? $year,
             'years' => ElectionYear::query()->orderBy('year', 'desc')->get(['id', 'year']),
@@ -78,7 +49,6 @@ class VillageVoteSummaryController extends Controller
             'villages' => $villages,
             'subdistrictId' => $subdistrictId,
             'villageId' => $villageId,
-            'rows' => $rows,
         ]);
     }
 

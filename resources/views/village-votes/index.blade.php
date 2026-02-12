@@ -46,32 +46,9 @@
   const tableWrap = document.getElementById('tableWrap');
   const statusText = document.getElementById('statusText');
 
-  function renderVillageSummary(items) {
-    const rowsHtml = (!items || items.length === 0)
-      ? `<tr><td colspan="4" class="muted">Belum ada data.</td></tr>`
-      : items.map(r => {
-          return `
-            <tr>
-              <td>${r.regency_name}</td>
-              <td>${r.subdistrict_name}</td>
-              <td>${r.village_name}</td>
-              <td style="font-weight:800;">${fmt.format(Number(r.votes_cast || 0))}</td>
-            </tr>
-          `;
-        }).join('');
-
+  function renderPlaceholder(text) {
     tableWrap.innerHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th>Kabupaten</th>
-            <th>Kecamatan</th>
-            <th>Desa</th>
-            <th>Suara Masuk</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
+      <div class="muted" style="padding: 6px 2px;">${text}</div>
     `;
   }
 
@@ -192,26 +169,17 @@
 
     if (!subdistrictId) {
       statusText.textContent = 'Pilih kecamatan untuk melihat daftar desa.';
-      renderVillageSummary([]);
+      renderPlaceholder('Belum ada data ditampilkan.');
+      return;
+    }
+
+    if (!villageId) {
+      statusText.textContent = 'Pilih desa untuk melihat detail TPS.';
+      renderPlaceholder('Silakan pilih desa.');
       return;
     }
 
     statusText.textContent = 'Memuat data…';
-
-    // Rekap per desa (dalam kecamatan)
-    if (!villageId) {
-      const params = new URLSearchParams();
-      params.set('year', year);
-      params.set('subdistrict_id', subdistrictId);
-
-      const res = await fetch(`/api/village-votes?${params.toString()}`);
-      const json = await res.json();
-
-      const items = json.data || [];
-      statusText.textContent = `Menampilkan ${items.length} desa`;
-      renderVillageSummary(items);
-      return;
-    }
 
     // Detail TPS (spreadsheet)
     const params = new URLSearchParams();
@@ -235,6 +203,6 @@
 
   // init
   loadSubdistricts();
-  renderVillageSummary([]);
+  renderPlaceholder('Belum ada data ditampilkan.');
 </script>
 @endpush

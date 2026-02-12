@@ -2,7 +2,7 @@
 
 @section('title', 'Admin - Suara Masuk Desa')
 @section('page_title', 'Admin: Suara Masuk Desa')
-@section('page_subtitle', 'CRUD suara masuk per desa')
+@section('page_subtitle', 'Detail suara per TPS')
 
 @section('content')
   <div class="card" style="margin-bottom:14px;">
@@ -41,10 +41,6 @@
 
         <button type="submit" class="area-popup__btn" style="width:auto; padding: 8px 12px;">Terapkan</button>
       </form>
-
-      <a href="{{ route('admin.village-votes.create', ['year' => $year]) }}" class="area-popup__btn" style="width:auto; display:inline-block; text-decoration:none; padding: 8px 12px;">
-        + Input Suara Desa
-      </a>
     </div>
 
     @if (session('status'))
@@ -55,64 +51,20 @@
   </div>
 
   <div class="card">
-    <div style="overflow:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Kabupaten</th>
-            <th>Kecamatan</th>
-            <th>Desa</th>
-            <th>Suara Masuk</th>
-            <th style="width:160px;">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse($rows as $r)
-            <tr>
-              <td>{{ $r->regency_name }}</td>
-              <td>{{ $r->subdistrict_name }}</td>
-              <td>{{ $r->village_name }}</td>
-              <td style="font-weight:800;">{{ number_format((int)$r->votes_cast, 0, ',', '.') }}</td>
-              <td>
-                <div style="display:flex; gap:8px;">
-                  @if((int)$r->vote_id > 0)
-                    <a href="{{ route('admin.village-votes.edit', (int)$r->vote_id) }}" class="btn btn--primary" style="padding:6px 10px;">Edit</a>
-                    <form method="POST" action="{{ route('admin.village-votes.destroy', (int)$r->vote_id) }}" onsubmit="return confirm('Hapus data suara desa ini?')">
-                      @csrf
-                      @method('DELETE')
-                      <button type="submit" class="btn btn--danger" style="padding:6px 10px;">Hapus</button>
-                    </form>
-                  @else
-                    <a href="{{ route('admin.village-votes.create', ['year' => $year]) }}" class="btn btn--primary" style="padding:6px 10px;">Input</a>
-                  @endif
-                </div>
-              </td>
-            </tr>
-          @empty
-            <tr><td colspan="5" class="muted">Belum ada data.</td></tr>
-          @endforelse
-        </tbody>
-      </table>
-    </div>
-
-    <div style="margin-top:12px;">
-      {{ $rows->links() }}
-    </div>
-  </div>
-
-  @if($villageId)
-    <div class="card" style="margin-top:14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
-        <div>
-          <div style="font-weight:800;">Detail Suara per TPS</div>
-          <div class="muted">Partai → Caleg → TPS (dinamis) + Akumulasi</div>
-        </div>
-        <div class="muted" id="tpsStatus">Memuat…</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+      <div>
+        <div style="font-weight:800;">Detail Suara per TPS</div>
+        <div class="muted">Pilih desa untuk menampilkan grid TPS</div>
       </div>
-
-      <div style="overflow:auto;" id="tpsGridWrap"></div>
+      <div class="muted" id="tpsStatus">@if($villageId) Memuat… @else — @endif</div>
     </div>
-  @endif
+
+    @if(!$villageId)
+      <div class="muted">Silakan pilih <b>Kecamatan</b> lalu <b>Desa</b>.</div>
+    @endif
+
+    <div style="overflow:auto;" id="tpsGridWrap"></div>
+  </div>
 @endsection
 
 @push('scripts')
