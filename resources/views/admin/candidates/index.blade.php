@@ -44,6 +44,7 @@
       <table>
         <thead>
           <tr>
+            <th>Kabupaten</th>
             <th>Partai</th>
             <th style="width:120px;">No</th>
             <th>Nama Calon</th>
@@ -53,6 +54,11 @@
         <tbody>
           @forelse($rows as $r)
             <tr>
+              <td>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <span style="font-weight:900;">{{ $r->area?->name ?? '—' }}</span>
+                </div>
+              </td>
               <td>
                 <div style="display:flex; gap:10px; align-items:center;">
                   <span style="font-weight:900;">{{ $r->party?->code }}</span>

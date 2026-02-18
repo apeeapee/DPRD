@@ -69,11 +69,9 @@ class DummyResultsSeeder extends Seeder
                     $partyLabel = $party->code ?? ('PARTY_' . $party->id);
                     $name = "Calon {$partyLabel} {$area->name} #{$k}";
 
-                    // ⚠️ Asumsi kolom candidates minimal: name, party_id
-                    // Kalau candidates kamu punya kolom lain wajib (mis. area_id), tambahin di sini.
                     $candidate = Candidate::updateOrCreate(
-                        ['name' => $name, 'party_id' => $party->id],
-                        ['name' => $name, 'party_id' => $party->id]
+                        ['name' => $name, 'party_id' => $party->id, 'area_id' => $area->id],
+                        ['name' => $name, 'party_id' => $party->id, 'area_id' => $area->id, 'number' => $k]
                     );
 
                     $candidateIds[] = $candidate->id;

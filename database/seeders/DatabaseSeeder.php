@@ -12,10 +12,12 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             ElectionYearSeeder::class,
             AreaSeeder::class,
+            PruneToThreeRegenciesSeeder::class,
             PartySeeder::class,
             DummyResultsSeeder::class,
             VillageDummySeeder::class,
             TpsDummySeeder::class,
+            FixTpsCandidateScopeSeeder::class,
         ]);
     }
 }

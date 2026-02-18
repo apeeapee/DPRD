@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
 use App\Models\Candidate;
 use App\Models\Party;
 use Illuminate\Http\Request;
@@ -13,13 +14,16 @@ class CandidateController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
         $partyId = $request->query('party_id');
+        $areaId = $request->query('area_id');
 
         $rows = Candidate::query()
-            ->with('party:id,code,name')
+            ->with('party:id,code,name', 'area:id,name')
+            ->when($areaId, fn ($query) => $query->where('area_id', $areaId))
             ->when($partyId, fn ($query) => $query->where('party_id', $partyId))
             ->when($q !== '', function ($query) use ($q) {
                 $query->where('name', 'like', "%{$q}%");
             })
+            ->orderByRaw('COALESCE(area_id, 999999) asc')
             ->orderBy('party_id')
             ->orderByRaw('COALESCE(number, 999999) asc')
             ->orderBy('name')
@@ -29,6 +33,8 @@ class CandidateController extends Controller
         return view('admin/candidates/index', [
             'q' => $q,
             'partyId' => $partyId,
+            'areaId' => $areaId,
+            'areas' => Area::query()->orderBy('name')->get(['id', 'name']),
             'parties' => Party::query()->orderBy('code')->get(['id', 'code', 'name']),
             'rows' => $rows,
         ]);
@@ -37,6 +43,7 @@ class CandidateController extends Controller
     public function create()
     {
         return view('admin/candidates/create', [
+            'areas' => Area::query()->orderBy('name')->get(['id', 'name']),
             'parties' => Party::query()->orderBy('code')->get(['id', 'code', 'name']),
         ]);
     }
@@ -45,12 +52,14 @@ class CandidateController extends Controller
     {
         $validated = $request->validate([
             'party_id' => ['required', 'exists:parties,id'],
+            'area_id' => ['required', 'exists:areas,id'],
             'name' => ['required', 'string', 'max:255'],
             'number' => ['nullable', 'integer', 'min:1'],
         ]);
 
         Candidate::create([
             'party_id' => $validated['party_id'],
+            'area_id' => $validated['area_id'],
             'name' => trim($validated['name']),
             'number' => $validated['number'] ?? null,
         ]);
@@ -64,6 +73,7 @@ class CandidateController extends Controller
     {
         return view('admin/candidates/edit', [
             'candidate' => $candidate,
+            'areas' => Area::query()->orderBy('name')->get(['id', 'name']),
             'parties' => Party::query()->orderBy('code')->get(['id', 'code', 'name']),
         ]);
     }
@@ -72,12 +82,14 @@ class CandidateController extends Controller
     {
         $validated = $request->validate([
             'party_id' => ['required', 'exists:parties,id'],
+            'area_id' => ['required', 'exists:areas,id'],
             'name' => ['required', 'string', 'max:255'],
             'number' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $candidate->update([
             'party_id' => $validated['party_id'],
+            'area_id' => $validated['area_id'],
             'name' => trim($validated['name']),
             'number' => $validated['number'] ?? null,
         ]);

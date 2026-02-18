@@ -24,6 +24,19 @@
       </div>
 
       <div>
+        <div class="muted" style="margin-bottom:6px;">Kabupaten</div>
+        <select name="area_id" required style="width:100%;">
+          <option value="">-- Pilih Kabupaten --</option>
+          @foreach($areas as $a)
+            <option value="{{ $a->id }}" @selected((string)old('area_id', $candidate->area_id) === (string)$a->id)>
+              {{ $a->name }}
+            </option>
+          @endforeach
+        </select>
+        @error('area_id')<div class="muted" style="color:#b91c1c; margin-top:6px;">{{ $message }}</div>@enderror
+      </div>
+
+      <div>
         <div class="muted" style="margin-bottom:6px;">No Urut (opsional)</div>
         <input name="number" type="number" min="1" value="{{ old('number', $candidate->number) }}" placeholder="1" style="width:100%;" />
         @error('number')<div class="muted" style="color:#b91c1c; margin-top:6px;">{{ $message }}</div>@enderror

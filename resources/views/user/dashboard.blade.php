@@ -106,6 +106,35 @@
         <canvas id="userCandidateChart" height="220"></canvas>
       </div>
     </div>
+
+    <div style="height:14px"></div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:900;">Detail Suara per TPS</div>
+          <div class="muted" style="margin-top:6px;">Partai → Caleg → TPS (dinamis) + Akumulasi</div>
+        </div>
+        <span class="chip">Tips: gunakan sticky header untuk tabel panjang</span>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="user-village-filter">
+        <select id="userSubdistrictSelect" class="user-village-filter__select" aria-label="Kecamatan">
+          <option value="">Pilih Kecamatan</option>
+        </select>
+        <select id="userVillageSelect" class="user-village-filter__select" aria-label="Desa" disabled>
+          <option value="">Pilih Desa</option>
+        </select>
+      </div>
+
+      <div style="height:8px"></div>
+      <div class="muted" id="userVillageChartHint">Pilih kecamatan dan desa untuk memuat tabel.</div>
+      <div style="height:12px"></div>
+
+      <div class="user-table-wrap" id="userVillageTpsWrap" style="display:none;"></div>
+    </div>
   </div>
 @endsection
 
@@ -160,7 +189,7 @@
   .user-grid{ display:grid; grid-template-columns: 1.15fr .85fr; gap: 14px; align-items:start; }
 
   .user-map{
-    height: 520px;
+    height: 440px;
     border-radius: var(--radius);
     overflow: hidden;
     border: 1px solid var(--border);
@@ -176,6 +205,45 @@
   }
   .user-area-kpi__val{ font-weight: 950; font-size: 18px; letter-spacing: .2px; margin-top: 2px; }
 
+  .user-village-filter{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .user-village-filter__select{ width:100%; }
+
+  .user-table-wrap{
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow:auto;
+    max-height: 420px;
+    background: rgba(2, 6, 23, .02);
+  }
+  .user-tps-table{ width:100%; border-collapse: separate; border-spacing: 0; min-width: 680px; }
+  .user-tps-table th, .user-tps-table td{ padding: 10px 12px; border-bottom: 1px solid rgba(15, 23, 42, .06); vertical-align: middle; }
+  .user-tps-table thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: rgba(15, 23, 42, .08);
+    backdrop-filter: blur(6px);
+    text-align: left;
+    font-weight: 900;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .user-tps-table td{ color: var(--text); }
+  .user-tps-num{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .user-tps-acc{ font-weight: 950; }
+  .user-party-pill{
+    display:inline-flex;
+    align-items:center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, .10);
+    background: rgba(37, 99, 235, .08);
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .user-party-pill__dot{ width:10px; height:10px; border-radius:999px; background: rgba(220, 38, 38, .85); display:inline-block; }
+
   .user-list{ display:flex; flex-direction:column; gap: 10px; }
   .user-list__item{ padding: 10px; border-radius: 14px; border: 1px solid rgba(15, 23, 42, .06); background: rgba(2, 6, 23, .02); }
   .user-list__title{ font-weight: 900; }
@@ -183,13 +251,14 @@
   @media (max-width: 1100px){
     .user-kpi-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .user-grid{ grid-template-columns: 1fr; }
-    .user-map{ height: 460px; }
+    .user-map{ height: 380px; }
   }
   @media (max-width: 640px){
     .user-topsearch{ flex-wrap:wrap; }
     .user-topsearch__input{ min-width: 100%; }
     .user-topsearch__select{ min-width: 100%; }
     .user-kpi-grid{ grid-template-columns: 1fr; }
+    .user-village-filter{ grid-template-columns: 1fr; }
   }
 </style>
 @endpush
@@ -235,6 +304,67 @@
     });
   }
 
+  function renderVillageTpsTable(data) {
+    const wrap = document.getElementById('userVillageTpsWrap');
+    if (!wrap) return;
+
+    const tps = data?.tps || [];
+    const parties = data?.parties || [];
+
+    if (!tps.length || !parties.length) {
+      wrap.style.display = 'none';
+      wrap.innerHTML = '';
+      return;
+    }
+
+    const tpsIds = tps.map(t => String(t.id));
+    const tpsCodes = tps.map(t => String(t.code ?? 'TPS'));
+
+    const thead = `
+      <thead>
+        <tr>
+          <th style="min-width:170px;">Partai</th>
+          <th style="min-width:220px;">Caleg</th>
+          ${tpsCodes.map(c => `<th class="user-tps-num">${escapeHtml(c)}</th>`).join('')}
+          <th class="user-tps-num">Akumulasi</th>
+        </tr>
+      </thead>
+    `;
+
+    const rows = [];
+    for (const p of parties) {
+      const partyName = p.party_name ?? '—';
+      const candidates = p.candidates || [];
+      for (const c of candidates) {
+        const votesByTps = c.votes_by_tps || {};
+        const votesCells = tpsIds.map(tid => {
+          const v = Number(votesByTps[tid] ?? votesByTps[Number(tid)] ?? 0);
+          return `<td class="user-tps-num">${fmt.format(v)}</td>`;
+        }).join('');
+
+        const total = Number(c.total ?? 0);
+        rows.push(`
+          <tr>
+            <td>
+              <span class="user-party-pill"><span class="user-party-pill__dot"></span>${escapeHtml(partyName)}</span>
+            </td>
+            <td style="font-weight:800;">${escapeHtml(c.candidate_name ?? '—')}</td>
+            ${votesCells}
+            <td class="user-tps-num user-tps-acc">${fmt.format(total)}</td>
+          </tr>
+        `);
+      }
+    }
+
+    wrap.innerHTML = `
+      <table class="user-tps-table">
+        ${thead}
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    `;
+    wrap.style.display = '';
+  }
+
   function renderCandidateChart(rows) {
     const items = (rows || []).slice(0, 10);
     const labels = items.map(r => {
@@ -272,6 +402,115 @@
     candidateChart.data.labels = labels;
     candidateChart.data.datasets[0].data = values;
     candidateChart.update();
+  }
+
+  async function initVillageVoteChartFilters() {
+    const elSubdistrict = document.getElementById('userSubdistrictSelect');
+    const elVillage = document.getElementById('userVillageSelect');
+    const elHint = document.getElementById('userVillageChartHint');
+    if (!elSubdistrict || !elVillage) return;
+
+    function setHint(text) {
+      if (elHint) elHint.textContent = text;
+    }
+
+    function resetVillageSelect() {
+      elVillage.innerHTML = '<option value="">Pilih Desa</option>';
+      elVillage.disabled = true;
+    }
+
+    const wrap = document.getElementById('userVillageTpsWrap');
+    if (wrap) {
+      wrap.style.display = 'none';
+      wrap.innerHTML = '';
+    }
+
+    resetVillageSelect();
+    let activeRegencyName = null;
+
+    async function loadSubdistricts(regencyName) {
+      activeRegencyName = regencyName || null;
+      resetVillageSelect();
+      if (wrap) { wrap.style.display = 'none'; wrap.innerHTML = ''; }
+
+      const regenciesList = activeRegencyName ? [activeRegencyName] : TARGET_REGENCIES;
+      const label = activeRegencyName ? `Memuat daftar kecamatan (${activeRegencyName})…` : 'Memuat daftar kecamatan…';
+      setHint(label);
+
+      const regenciesParam = encodeURIComponent(regenciesList.join(','));
+      const res = await fetch(`/api/subdistricts?regencies=${regenciesParam}`);
+      const json = await res.json();
+      const items = json.data || [];
+
+      const placeholder = activeRegencyName ? `Pilih Kecamatan (${activeRegencyName})` : 'Pilih Kecamatan';
+      elSubdistrict.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>`;
+      items.forEach(sd => {
+        const opt = document.createElement('option');
+        opt.value = String(sd.id);
+        opt.textContent = activeRegencyName ? sd.name : `${sd.regency_name} — ${sd.name}`;
+        elSubdistrict.appendChild(opt);
+      });
+
+      setHint('Pilih kecamatan dan desa untuk memuat tabel.');
+    }
+
+    // Called from map selection
+    window.setVillageRegencyFilter = async (regencyName) => {
+      const cleaned = String(regencyName || '').trim();
+      if (!cleaned) {
+        await loadSubdistricts(null);
+        return;
+      }
+
+      const ok = TARGET_REGENCIES.some(t => normalizeAreaName(t) === normalizeAreaName(cleaned));
+      await loadSubdistricts(ok ? cleaned : null);
+    };
+
+    await loadSubdistricts(null);
+
+    elSubdistrict.addEventListener('change', async () => {
+      const subdistrictId = elSubdistrict.value;
+      resetVillageSelect();
+      if (wrap) { wrap.style.display = 'none'; wrap.innerHTML = ''; }
+
+      if (!subdistrictId) {
+        setHint('Pilih kecamatan dan desa untuk memuat tabel.');
+        return;
+      }
+
+      setHint('Memuat daftar desa…');
+      const vRes = await fetch(`/api/villages?subdistrict_id=${encodeURIComponent(subdistrictId)}`);
+      const vJson = await vRes.json();
+      const villages = vJson.data || [];
+
+      villages.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = String(v.id);
+        opt.textContent = v.name;
+        elVillage.appendChild(opt);
+      });
+      elVillage.disabled = villages.length === 0;
+
+      setHint(villages.length ? 'Pilih desa untuk memuat tabel.' : 'Tidak ada desa untuk kecamatan ini.');
+    });
+
+    elVillage.addEventListener('change', async () => {
+      const villageId = elVillage.value;
+      if (wrap) { wrap.style.display = 'none'; wrap.innerHTML = ''; }
+      if (!villageId) {
+        setHint('Pilih desa untuk memuat tabel.');
+        return;
+      }
+
+      setHint('Memuat detail suara per TPS…');
+      const r = await fetch(`/api/village-tps-results?year=${encodeURIComponent(DEFAULT_YEAR)}&village_id=${encodeURIComponent(villageId)}`);
+      const j = await r.json();
+
+      renderVillageTpsTable(j.data);
+
+      const grandTotal = Number(j.data?.grand_total ?? 0);
+      setHint(`Total suara masuk desa: ${fmt.format(grandTotal)}`);
+    });
   }
 
   function escapeHtml(str) {
@@ -378,6 +617,12 @@
   }
 
   function openAreaPopup(latlng, area) {
+    try {
+      if (area?.name && typeof window.setVillageRegencyFilter === 'function') {
+        window.setVillageRegencyFilter(area.name);
+      }
+    } catch (_) {}
+
     const dpt = area?.summary?.registered_voters ?? 0;
     const votesCast = area?.summary?.votes_cast ?? 0;
     const content = `
@@ -461,6 +706,12 @@
     const res = await fetch(`/api/areas/${areaId}?year=${encodeURIComponent(DEFAULT_YEAR)}`);
     const json = await res.json();
 
+    try {
+      if (json.area?.name && typeof window.setVillageRegencyFilter === 'function') {
+        window.setVillageRegencyFilter(json.area.name);
+      }
+    } catch (_) {}
+
     if (elAreaName) elAreaName.textContent = json.area?.name ?? '—';
     if (elAreaType) elAreaType.textContent = json.area?.type ?? '—';
 
@@ -533,6 +784,9 @@
   }
 
   loadAreas();
+
+  // village chart filter
+  initVillageVoteChartFilters();
 
   // initial render for candidate chart (aggregated)
   renderCandidateChart(initialCandidates);

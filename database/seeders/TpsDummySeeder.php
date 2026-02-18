@@ -7,6 +7,7 @@ use App\Models\ElectionYear;
 use App\Models\Party;
 use App\Models\PollingStation;
 use App\Models\TpsCandidateVote;
+use App\Models\Area;
 use App\Models\Village;
 use App\Models\VillageVoteSummary;
 use Illuminate\Database\Seeder;
@@ -22,24 +23,38 @@ class TpsDummySeeder extends Seeder
             return;
         }
 
-        // Buat caleg dummy per partai (3 caleg)
-        $candidates = collect();
-        foreach ($parties as $party) {
-            for ($k = 1; $k <= 3; $k++) {
-                $name = 'Calon ' . ($party->code ?? ('P' . $party->id)) . ' #' . $k;
+        $areasByName = Area::query()->pluck('id', 'name')->all();
 
-                $candidate = Candidate::query()->firstOrCreate(
-                    ['party_id' => $party->id, 'name' => $name],
-                    ['party_id' => $party->id, 'name' => $name, 'number' => $k]
-                );
-
-                $candidates->push($candidate);
-            }
-        }
-
-        $villages = Village::query()->get(['id']);
+        $villages = Village::query()
+            ->join('subdistricts', 'subdistricts.id', '=', 'villages.subdistrict_id')
+            ->get([
+                'villages.id as id',
+                'subdistricts.regency_name as regency_name',
+            ]);
 
         foreach ($villages as $village) {
+            $regencyName = (string) ($village->regency_name ?? '');
+            $areaId = $areasByName[$regencyName] ?? null;
+            if (!$areaId) {
+                continue;
+            }
+
+            // Buat caleg dummy khusus kabupaten ini (3 caleg per partai)
+            $candidates = collect();
+            foreach ($parties as $party) {
+                $partyLabel = $party->code ?? ('P' . $party->id);
+                for ($k = 1; $k <= 3; $k++) {
+                    $name = 'Calon ' . $partyLabel . ' ' . $regencyName . ' #' . $k;
+
+                    $candidate = Candidate::query()->firstOrCreate(
+                        ['party_id' => $party->id, 'area_id' => $areaId, 'name' => $name],
+                        ['party_id' => $party->id, 'area_id' => $areaId, 'name' => $name, 'number' => $k]
+                    );
+
+                    $candidates->push($candidate);
+                }
+            }
+
             // 5 TPS per desa
             $tpsList = [];
             for ($i = 1; $i <= 5; $i++) {

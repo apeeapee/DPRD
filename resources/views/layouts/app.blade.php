@@ -42,11 +42,61 @@
       width: 280px;
       padding: 18px;
       color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
       background:
         radial-gradient(1200px 600px at 30% -10%, rgba(96, 165, 250, .28), transparent 50%),
         linear-gradient(180deg, #0b1020, #0f1b33 60%, #0b1020);
       border-right: 1px solid rgba(255,255,255,.08);
     }
+
+    .sidebar__nav{ display:flex; flex-direction:column; }
+    .sidebar__spacer{ flex: 1; }
+    .sidebar__footer{ margin-top: 12px; }
+
+    .sidebar__profile{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+    }
+    .sidebar__profile-left{ display:flex; align-items:center; gap: 10px; min-width: 0; }
+    .sidebar__avatar{
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 950;
+      color: rgba(226,232,240,.92);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      flex: 0 0 auto;
+    }
+    .sidebar__who{ min-width: 0; }
+    .sidebar__name{ font-weight: 950; font-size: 14px; color: rgba(226,232,240,.92); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar__email{ margin-top: 2px; font-size: 11px; color: rgba(226,232,240,.70); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar__logoutBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      color: rgba(226,232,240,.92);
+      font-weight: 950;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .sidebar__logoutBtn:hover{ filter: brightness(1.08); transform: translateY(-1px); }
+    .sidebar__logoutBtn:active{ transform: translateY(0px); }
 
     .sidebar h2{
       margin: 0;
@@ -85,13 +135,44 @@
       margin-bottom: 14px;
     }
 
+    .main__scroll{ width: 100%; }
+
+    /* Fixed chrome (admin-like): only content scrolls */
+    html, body{ height: 100%; }
+    body.chrome-fixed{ height: 100vh; overflow: hidden; }
+    body.chrome-fixed .wrap{ height: 100vh; min-height: 100vh; }
+    body.chrome-fixed .sidebar{ position: sticky; top: 0; height: 100vh; overflow: auto; }
+    body.chrome-fixed .main{ height: 100vh; padding: 0; max-width: none; margin: 0; overflow: hidden; }
+    body.chrome-fixed .main__scroll{
+      height: 100vh;
+      overflow: auto;
+      padding: 0 18px 18px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    body.chrome-fixed .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 14px 0;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: none;
+    }
+
     .topbar__left{ flex: 1; min-width: 280px; }
     .topbar__title{ font-weight:800; font-size:22px; letter-spacing:.2px; line-height: 1.2; }
     .topbar__meta{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; }
 
     .topbar__right{ flex: 1; display:flex; justify-content:flex-end; }
-    .toolbar{ width:100%; justify-content:flex-end; }
-    .toolbar input[type="search"]{ flex: 1; min-width: 260px; max-width: 620px; }
+    .toolbar{
+      width:100%;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      align-items:center;
+    }
 
     .card{
       background: var(--card);
@@ -103,6 +184,32 @@
     }
 
     .grid{ display:grid; grid-template-columns: 1.25fr .75fr; gap: 14px; align-items:start; }
+
+    /* Laravel pagination (default Tailwind view) – keep icons compact even without Tailwind */
+    nav[role="navigation"][aria-label*="Pagination"] > div:first-child{ display:none; }
+    nav[role="navigation"][aria-label*="Pagination"] > div:last-child{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+    nav[role="navigation"][aria-label*="Pagination"] svg{
+      width: 18px;
+      height: 18px;
+      display:block;
+    }
+    nav[role="navigation"][aria-label*="Pagination"] a,
+    nav[role="navigation"][aria-label*="Pagination"] span{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+    }
+    @media (max-width: 640px){
+      nav[role="navigation"][aria-label*="Pagination"] > div:first-child{ display:flex; gap:10px; justify-content:space-between; }
+      nav[role="navigation"][aria-label*="Pagination"] > div:last-child{ display:none; }
+    }
 
     #map{
       height: 560px;
@@ -227,18 +334,26 @@
       #map{ height: 460px; }
       .topbar{ flex-direction: column; align-items: stretch; }
       .topbar__right{ justify-content:flex-start; }
-      .toolbar{ justify-content:flex-start; }
+      .toolbar{ display:flex; justify-content:flex-start; }
       .toolbar input[type="search"]{ max-width: 100%; }
+
+      body.chrome-fixed{ height:auto; overflow:auto; }
+      body.chrome-fixed .wrap{ height:auto; min-height:100vh; }
+      body.chrome-fixed .sidebar{ position: relative; height:auto; overflow: visible; }
+      body.chrome-fixed .main{ height:auto; overflow: visible; }
+      body.chrome-fixed .main__scroll{ height:auto; overflow: visible; padding: 18px; max-width: 1400px; margin: 0 auto; }
+      body.chrome-fixed .topbar{ position: static; background: transparent; backdrop-filter: none; padding-top: 0; }
     }
   </style>
 
   @stack('styles')
 </head>
-<body>
-  @php
-    $hideSidebar = trim($__env->yieldContent('hide_sidebar')) === '1';
-    $hideTopbar = trim($__env->yieldContent('hide_topbar')) === '1';
-  @endphp
+@php
+  $hideSidebar = trim($__env->yieldContent('hide_sidebar')) === '1';
+  $hideTopbar = trim($__env->yieldContent('hide_topbar')) === '1';
+  $fixedChrome = (!$hideSidebar) && (!$hideTopbar);
+@endphp
+<body class="{{ $fixedChrome ? 'chrome-fixed' : '' }}">
   <div class="wrap">
     @unless($hideSidebar)
       <aside class="sidebar">
@@ -246,48 +361,71 @@
         <div class="muted">Jawa Tengah</div>
         <div style="height:12px"></div>
         @auth
-          @if(auth()->user()->is_admin)
-            <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
-            <a href="{{ route('admin.village-votes.index') }}">Suara Masuk Desa</a>
-            <a href="{{ route('admin.candidates.index') }}">Data Calon</a>
-            <a href="{{ route('admin.parties.index') }}">Data Partai</a>
-          @else
-            <a href="{{ route('user.dashboard') }}">Dashboard</a>
-          @endif
-          <div style="height:10px"></div>
-          <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" style="width:100%; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color: rgba(226,232,240,.92); padding:10px 10px; border-radius:12px; font-weight:800; cursor:pointer;">Logout</button>
-          </form>
+          <div class="sidebar__nav">
+            @if(auth()->user()->is_admin)
+              <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
+              <a href="{{ route('admin.village-votes.index') }}">Suara Masuk Desa</a>
+              <a href="{{ route('admin.tps-votes.index') }}">Input Suara TPS</a>
+              <a href="{{ route('admin.candidates.index') }}">Data Calon</a>
+              <a href="{{ route('admin.parties.index') }}">Data Partai</a>
+            @else
+              <a href="{{ route('user.dashboard') }}">Dashboard</a>
+            @endif
+          </div>
+
+          <div class="sidebar__spacer"></div>
+
+          <div class="sidebar__footer">
+            <div class="sidebar__profile">
+              <div class="sidebar__profile-left">
+                @php
+                  $uName = auth()->user()->name ?? 'User';
+                  $uEmail = auth()->user()->email ?? '';
+                  $initial = strtoupper(mb_substr($uName, 0, 1));
+                @endphp
+                <div class="sidebar__avatar" aria-hidden="true">{{ $initial }}</div>
+                <div class="sidebar__who">
+                  <div class="sidebar__name">{{ $uName }}</div>
+                  <div class="sidebar__email">{{ $uEmail }}</div>
+                </div>
+              </div>
+
+              <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+                @csrf
+                <button class="sidebar__logoutBtn" type="submit">Logout</button>
+              </form>
+            </div>
+          </div>
         @else
-          <a href="{{ route('login') }}">Login</a>
+          <div class="sidebar__nav">
+            <a href="{{ route('login') }}">Login</a>
+          </div>
         @endauth
       </aside>
     @endunless
 
     <main class="main">
-      @unless($hideTopbar)
-        <div class="topbar">
-          <div class="topbar__left">
-            <div class="topbar__title">@yield('page_title','Dashboard')</div>
-            <div class="muted topbar__meta">
-              <span>@yield('page_subtitle','Visualisasi ringkasan & hasil per wilayah')</span>
-              <span class="chip">Update: {{ now()->format('d M Y, H:i') }}</span>
+      <div class="main__scroll">
+        @unless($hideTopbar)
+          <div class="topbar">
+            <div class="topbar__left">
+              <div class="topbar__title">@yield('page_title','Dashboard')</div>
+              <div class="muted topbar__meta">
+                <span>@yield('page_subtitle','Visualisasi ringkasan & hasil per wilayah')</span>
+                <span class="chip">Update: {{ now()->format('d M Y, H:i') }}</span>
+              </div>
+            </div>
+
+            <div class="topbar__right">
+              <div class="toolbar">
+                @yield('topbar_right')
+              </div>
             </div>
           </div>
+        @endunless
 
-          <div class="topbar__right">
-            <div class="toolbar">
-              <input type="search" placeholder="Cari kabupaten/kecamatan/desa, partai, caleg" />
-              <a class="btn btn--ghost" href="#" onclick="return false;">Export Excel</a>
-              <a class="btn btn--ghost" href="#" onclick="return false;">Export PDF</a>
-              <button class="btn btn--primary" type="button" onclick="window.location.reload();">Refresh</button>
-            </div>
-          </div>
-        </div>
-      @endunless
-
-      @yield('content')
+        @yield('content')
+      </div>
     </main>
   </div>
 

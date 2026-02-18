@@ -10,6 +10,7 @@ class Candidate extends Model
 {
     protected $fillable = [
         'party_id',
+        'area_id',
         'name',
         'number',
     ];
@@ -17,6 +18,11 @@ class Candidate extends Model
     protected $casts = [
         'number' => 'integer',
     ];
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
 
     public function party(): BelongsTo
     {

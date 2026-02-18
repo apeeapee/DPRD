@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\Admin\VillageVoteSummaryController;
+use App\Http\Controllers\Admin\TpsVoteController;
 use App\Http\Controllers\Admin\PartyController;
 use App\Http\Controllers\Admin\CandidateController;
 
@@ -26,6 +27,14 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/suara-desa/{villageVote}/edit', [VillageVoteSummaryController::class, 'edit'])->name('village-votes.edit');
         Route::put('/suara-desa/{villageVote}', [VillageVoteSummaryController::class, 'update'])->name('village-votes.update');
         Route::delete('/suara-desa/{villageVote}', [VillageVoteSummaryController::class, 'destroy'])->name('village-votes.destroy');
+
+        // Input suara per TPS
+        Route::get('/suara-tps', [TpsVoteController::class, 'index'])->name('tps-votes.index');
+        Route::get('/suara-tps/create', [TpsVoteController::class, 'create'])->name('tps-votes.create');
+        Route::post('/suara-tps', [TpsVoteController::class, 'store'])->name('tps-votes.store');
+        Route::get('/suara-tps/{pollingStation}/edit', [TpsVoteController::class, 'edit'])->name('tps-votes.edit');
+        Route::put('/suara-tps/{pollingStation}', [TpsVoteController::class, 'update'])->name('tps-votes.update');
+        Route::delete('/suara-tps/{pollingStation}', [TpsVoteController::class, 'destroy'])->name('tps-votes.destroy');
 
         // Data Partai
         Route::get('/partai', [PartyController::class, 'index'])->name('parties.index');
