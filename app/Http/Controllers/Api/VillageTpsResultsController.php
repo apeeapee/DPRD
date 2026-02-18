@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\Candidate;
 use App\Models\ElectionYear;
+use App\Models\Subdistrict;
 use App\Models\PollingStation;
 use App\Models\TpsCandidateVote;
 use Illuminate\Http\Request;
@@ -37,45 +40,69 @@ class VillageTpsResultsController extends Controller
             ->orderBy('code')
             ->get(['id', 'code', 'sort_order']);
 
-        // votes rows
-        $rows = DB::table('tps_candidate_votes as tcv')
+        $tpsIds = $tps->pluck('id')->all();
+
+        // Resolve village's regency -> Area, so we can return full candidate list (including zeros)
+        $regencyName = Subdistrict::query()
+            ->join('villages', 'villages.subdistrict_id', '=', 'subdistricts.id')
+            ->where('villages.id', $villageId)
+            ->value('subdistricts.regency_name');
+
+        $area = $regencyName ? Area::query()->where('name', $regencyName)->first(['id', 'name']) : null;
+
+        $candidates = collect();
+        if ($area) {
+            $candidates = Candidate::query()
+                ->join('parties as p', 'p.id', '=', 'candidates.party_id')
+                ->where('candidates.area_id', $area->id)
+                ->select([
+                    'p.id as party_id',
+                    'p.name as party_name',
+                    'candidates.id as candidate_id',
+                    'candidates.name as candidate_name',
+                    'candidates.number as candidate_number',
+                    'candidates.party_id as candidate_party_id',
+                ])
+                ->orderBy('p.name')
+                ->orderByRaw('COALESCE(candidates.number, 999999) asc')
+                ->orderBy('candidates.name')
+                ->get();
+        }
+
+        // votes map: [candidate_id][tps_id] = votes
+        $voteRows = DB::table('tps_candidate_votes as tcv')
             ->join('polling_stations as ps', 'ps.id', '=', 'tcv.polling_station_id')
-            ->join('candidates as c', 'c.id', '=', 'tcv.candidate_id')
-            ->join('parties as p', 'p.id', '=', 'c.party_id')
             ->where('tcv.election_year_id', $electionYear->id)
             ->where('ps.village_id', $villageId)
             ->select([
-                'p.id as party_id',
-                'p.name as party_name',
-                'c.id as candidate_id',
-                'c.name as candidate_name',
-                'ps.id as tps_id',
-                'ps.code as tps_code',
-                'tcv.votes as votes',
+                'tcv.candidate_id as candidate_id',
+                'tcv.polling_station_id as tps_id',
+                DB::raw('COALESCE(SUM(tcv.votes),0) as votes'),
             ])
-            ->orderBy('p.name')
-            ->orderBy('c.name')
+            ->groupBy('tcv.candidate_id', 'tcv.polling_station_id')
             ->get();
 
-        $tpsIds = $tps->pluck('id')->all();
+        $votesMap = [];
+        foreach ($voteRows as $vr) {
+            $cid = (int) $vr->candidate_id;
+            $tid = (int) $vr->tps_id;
+            $votesMap[$cid][$tid] = (int) ($vr->votes ?? 0);
+        }
 
         $parties = [];
         $partyIndex = [];
-
         $grandTotalsByTps = array_fill_keys($tpsIds, 0);
         $grandTotal = 0;
 
-        foreach ($rows as $r) {
-            $pid = (int) $r->party_id;
-            $cid = (int) $r->candidate_id;
-            $tid = (int) $r->tps_id;
-            $v = (int) $r->votes;
+        foreach ($candidates as $c) {
+            $pid = (int) $c->party_id;
+            $cid = (int) $c->candidate_id;
 
             if (!isset($partyIndex[$pid])) {
                 $partyIndex[$pid] = count($parties);
                 $parties[] = [
                     'party_id' => $pid,
-                    'party_name' => $r->party_name,
+                    'party_name' => $c->party_name,
                     'candidates' => [],
                     'totals_by_tps' => array_fill_keys($tpsIds, 0),
                     'total' => 0,
@@ -84,28 +111,27 @@ class VillageTpsResultsController extends Controller
 
             $pi = $partyIndex[$pid];
 
-            if (!isset($parties[$pi]['candidates'][$cid])) {
-                $parties[$pi]['candidates'][$cid] = [
-                    'candidate_id' => $cid,
-                    'candidate_name' => $r->candidate_name,
-                    'votes_by_tps' => array_fill_keys($tpsIds, 0),
-                    'total' => 0,
-                ];
+            $votesByTps = array_fill_keys($tpsIds, 0);
+            $total = 0;
+
+            foreach ($tpsIds as $tid) {
+                $v = (int) ($votesMap[$cid][$tid] ?? 0);
+                $votesByTps[$tid] = $v;
+                $total += $v;
+
+                $parties[$pi]['totals_by_tps'][$tid] += $v;
+                $grandTotalsByTps[$tid] += $v;
             }
 
-            $parties[$pi]['candidates'][$cid]['votes_by_tps'][$tid] += $v;
-            $parties[$pi]['candidates'][$cid]['total'] += $v;
+            $parties[$pi]['total'] += $total;
+            $grandTotal += $total;
 
-            $parties[$pi]['totals_by_tps'][$tid] += $v;
-            $parties[$pi]['total'] += $v;
-
-            $grandTotalsByTps[$tid] += $v;
-            $grandTotal += $v;
-        }
-
-        // convert candidates dict to list
-        foreach ($parties as &$p) {
-            $p['candidates'] = array_values($p['candidates']);
+            $parties[$pi]['candidates'][] = [
+                'candidate_id' => $cid,
+                'candidate_name' => (string) $c->candidate_name,
+                'votes_by_tps' => $votesByTps,
+                'total' => $total,
+            ];
         }
 
         return response()->json([

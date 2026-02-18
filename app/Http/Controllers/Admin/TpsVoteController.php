@@ -12,6 +12,7 @@ use App\Models\TpsCandidateVote;
 use App\Models\Village;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\VoteAggregationService;
 
 class TpsVoteController extends Controller
 {
@@ -180,6 +181,9 @@ class TpsVoteController extends Controller
             $allowedCandidateIds
         );
 
+        app(VoteAggregationService::class)
+            ->syncVillageAndAreaFromVillageId((int) $validated['election_year_id'], (int) $validated['village_id']);
+
         $year = ElectionYear::find($validated['election_year_id']);
 
         return redirect()
@@ -272,6 +276,9 @@ class TpsVoteController extends Controller
             $allowedCandidateIds
         );
 
+        app(VoteAggregationService::class)
+            ->syncVillageAndAreaFromVillageId((int) $validated['election_year_id'], (int) $pollingStation->village_id);
+
         $year = ElectionYear::find($validated['election_year_id']);
 
         return redirect()
@@ -281,7 +288,16 @@ class TpsVoteController extends Controller
 
     public function destroy(Request $request, PollingStation $pollingStation)
     {
+        $year = (int) ($request->query('year') ?? 2024);
+        $electionYear = ElectionYear::query()->where('year', $year)->first();
+
+        $villageId = (int) $pollingStation->village_id;
         $pollingStation->delete();
+
+        if ($electionYear) {
+            app(VoteAggregationService::class)
+                ->syncVillageAndAreaFromVillageId((int) $electionYear->id, $villageId);
+        }
 
         return redirect()
             ->route('admin.tps-votes.index')

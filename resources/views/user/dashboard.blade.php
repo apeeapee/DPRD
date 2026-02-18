@@ -61,20 +61,59 @@
     </div>
 
     <div class="user-grid">
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-          <div>
-            <div style="font-weight:900;">Peta Kab/Kota</div>
-            <div class="muted" style="margin-top:6px;">Klik wilayah untuk lihat detail</div>
+      <div class="user-left-stack">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:900;">Peta Kab/Kota</div>
+              <div class="muted" style="margin-top:6px;">Klik wilayah untuk lihat detail</div>
+            </div>
+            <span class="chip">Jateng (3 kabupaten)</span>
           </div>
-          <span class="chip">Jateng (3 kabupaten)</span>
+
+          <div style="height:12px"></div>
+          <div id="userMap" class="user-map"></div>
         </div>
 
-        <div style="height:12px"></div>
-        <div id="userMap" class="user-map"></div>
+        <div class="card user-topwilayah-card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:900;">Top Wilayah</div>
+              <div class="muted" style="margin-top:6px;">Kab/Kota dengan suara masuk tertinggi</div>
+            </div>
+            <a class="btn btn--ghost" href="#detailTps" style="text-decoration:none;">Detail</a>
+          </div>
+
+          <div style="height:10px"></div>
+          <div class="user-topchips">
+            @foreach(($topPartyChips ?? []) as $p)
+              <span class="user-mini-chip"><span class="user-mini-chip__dot"></span>{{ $p }}</span>
+            @endforeach
+          </div>
+
+          <div style="height:10px"></div>
+          <div class="user-topregion-list user-topregion-list--compact">
+            @forelse(collect($topRegions ?? [])->take(3) as $i => $r)
+              <div class="user-topregion-item user-topregion-item--compact">
+                <div>
+                  <div class="user-topregion-title">{{ ($i + 1) }}. {{ $r['area_name'] ?? '—' }}</div>
+                  <div class="muted" style="margin-top:4px;">
+                    Unggul:
+                    <span class="user-mini-chip" style="padding:4px 8px; font-size:12px;">
+                      <span class="user-mini-chip__dot"></span>{{ $r['top_party'] ?? '—' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="user-topregion-val">{{ number_format(($r['votes_cast'] ?? 0), 0, ',', '.') }}</div>
+              </div>
+            @empty
+              <div class="muted">Belum ada data wilayah.</div>
+            @endforelse
+          </div>
+        </div>
       </div>
 
-      <div class="card">
+      <div class="card user-right-panel">
         <div style="font-weight:900;" id="userAreaName">Pilih wilayah</div>
         <div class="muted" style="margin-top:6px;" id="userAreaType">—</div>
 
@@ -94,7 +133,9 @@
         <div style="font-weight:900;">Distribusi Suara Partai</div>
         <div class="muted" style="margin-top:6px;" id="userPartyScope">Akumulasi 3 kabupaten target</div>
         <div style="height:10px"></div>
-        <canvas id="userPartyChart" height="140"></canvas>
+        <div class="user-party-chart">
+          <canvas id="userPartyChart"></canvas>
+        </div>
 
         <div style="height:14px"></div>
 
@@ -103,13 +144,15 @@
           <span class="chip" id="userCandidateScope">wilayah terpilih</span>
         </div>
         <div style="height:10px"></div>
-        <canvas id="userCandidateChart" height="220"></canvas>
+        <div class="user-candidate-chart">
+          <canvas id="userCandidateChart"></canvas>
+        </div>
       </div>
     </div>
 
     <div style="height:14px"></div>
 
-    <div class="card">
+    <div class="card" id="detailTps">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
         <div>
           <div style="font-weight:900;">Detail Suara per TPS</div>
@@ -186,7 +229,47 @@
   .user-kpi__label{ font-weight: 900; font-size: 12px; letter-spacing: .3px; color: var(--muted); }
   .user-kpi__value{ font-weight: 950; font-size: 28px; margin-top: 8px; letter-spacing: .2px; line-height: 1.1; }
 
-  .user-grid{ display:grid; grid-template-columns: 1.15fr .85fr; gap: 14px; align-items:start; }
+  .user-grid{ display:grid; grid-template-columns: 1.15fr .85fr; gap: 14px; align-items:stretch; }
+
+  .user-left-stack{ display:flex; flex-direction:column; gap: 14px; }
+  .user-topwilayah-card{ padding: 14px; }
+
+  .user-right-panel{
+    display:flex;
+    flex-direction:column;
+    height: 100%;
+  }
+
+  .user-topchips{ display:flex; gap: 10px; flex-wrap:wrap; }
+  .user-mini-chip{
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, .10);
+    background: rgba(2, 6, 23, .02);
+    font-weight: 900;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .user-mini-chip__dot{ width: 10px; height: 10px; border-radius: 999px; background: rgba(220, 38, 38, .85); display:inline-block; }
+
+  .user-topregion-list{ display:flex; flex-direction:column; gap: 10px; }
+  .user-topregion-list--compact{ gap: 8px; }
+  .user-topregion-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, .06);
+    background: rgba(2, 6, 23, .02);
+  }
+  .user-topregion-item--compact{ padding: 10px; }
+  .user-topregion-title{ font-weight: 950; }
+  .user-topregion-val{ font-weight: 950; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   .user-map{
     height: 440px;
@@ -204,6 +287,9 @@
     padding: 10px;
   }
   .user-area-kpi__val{ font-weight: 950; font-size: 18px; letter-spacing: .2px; margin-top: 2px; }
+
+  .user-party-chart{ height: 190px; }
+  .user-candidate-chart{ flex: 1; min-height: 420px; }
 
   .user-village-filter{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .user-village-filter__select{ width:100%; }
@@ -259,6 +345,8 @@
     .user-topsearch__select{ min-width: 100%; }
     .user-kpi-grid{ grid-template-columns: 1fr; }
     .user-village-filter{ grid-template-columns: 1fr; }
+    .user-party-chart{ height: 170px; }
+    .user-candidate-chart{ min-height: 360px; }
   }
 </style>
 @endpush
@@ -298,8 +386,12 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => fmt.format(v) } },
+          x: { grid: { display: false } }
+        }
       }
     });
   }
@@ -367,32 +459,51 @@
 
   function renderCandidateChart(rows) {
     const items = (rows || []).slice(0, 10);
-    const labels = items.map(r => {
+    const fullLabels = items.map(r => {
       const name = (r.candidate_name ?? r.name ?? '—');
       const party = (r.party_name ?? r.party ?? '—');
       return `${name} (${party})`;
     });
+    const labels = fullLabels.map(s => truncateLabel(s, 42));
     const values = items.map(r => Number(r.votes ?? 0));
 
     if (!elCandidateCanvas) return;
     if (!candidateChart) {
       candidateChart = new Chart(elCandidateCanvas, {
         type: 'bar',
-        data: { labels, datasets: [{ label: 'Suara', data: values }] },
+        data: { labels, datasets: [{ label: 'Suara', data: values, fullLabels }] },
         options: {
           indexAxis: 'y',
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: (ctx) => ` ${fmt.format(Number(ctx.parsed.x ?? 0))} suara`
+                title: (items) => {
+                  const it = items?.[0];
+                  const idx = Number(it?.dataIndex ?? 0);
+                  const ds = it?.dataset || {};
+                  const fl = ds.fullLabels || [];
+                  return String(fl[idx] ?? it?.label ?? '');
+                },
+                label: (ctx) => ` ${fmt.format(Number(ctx.parsed.x ?? 0))} suara`,
               }
             }
           },
           scales: {
-            x: { beginAtZero: true, ticks: { callback: (v) => fmt.format(v) } },
-            y: { ticks: { autoSkip: false } }
+            x: {
+              beginAtZero: true,
+              ticks: { callback: (v) => fmt.format(v) },
+              grid: { color: 'rgba(15, 23, 42, .06)' }
+            },
+            y: {
+              ticks: {
+                autoSkip: true,
+                padding: 6,
+              },
+              grid: { display: false }
+            }
           }
         }
       });
@@ -401,7 +512,15 @@
 
     candidateChart.data.labels = labels;
     candidateChart.data.datasets[0].data = values;
+    candidateChart.data.datasets[0].fullLabels = fullLabels;
     candidateChart.update();
+  }
+
+  function truncateLabel(str, maxLen) {
+    const s = String(str ?? '');
+    const n = Number(maxLen ?? 40);
+    if (!n || s.length <= n) return s;
+    return s.slice(0, Math.max(0, n - 1)) + '…';
   }
 
   async function initVillageVoteChartFilters() {

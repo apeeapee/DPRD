@@ -364,8 +364,8 @@
           <div class="sidebar__nav">
             @if(auth()->user()->is_admin)
               <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
+              <a href="{{ route('admin.dpt.index') }}">Pengaturan DPT</a>
               <a href="{{ route('admin.village-votes.index') }}">Suara Masuk Desa</a>
-              <a href="{{ route('admin.tps-votes.index') }}">Input Suara TPS</a>
               <a href="{{ route('admin.candidates.index') }}">Data Calon</a>
               <a href="{{ route('admin.parties.index') }}">Data Partai</a>
             @else

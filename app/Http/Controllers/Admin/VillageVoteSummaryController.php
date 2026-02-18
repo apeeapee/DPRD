@@ -8,6 +8,7 @@ use App\Models\Subdistrict;
 use App\Models\Village;
 use App\Models\VillageVoteSummary;
 use Illuminate\Http\Request;
+use App\Services\VoteAggregationService;
 
 class VillageVoteSummaryController extends Controller
 {
@@ -44,6 +45,7 @@ class VillageVoteSummaryController extends Controller
 
         return view('admin/village-votes/index', [
             'year' => $electionYear?->year ?? $year,
+            'yearRow' => $electionYear,
             'years' => ElectionYear::query()->orderBy('year', 'desc')->get(['id', 'year']),
             'subdistricts' => $subdistricts,
             'villages' => $villages,
@@ -90,6 +92,9 @@ class VillageVoteSummaryController extends Controller
             ]
         );
 
+        app(VoteAggregationService::class)
+            ->syncVillageAndAreaFromVillageId((int) $validated['election_year_id'], (int) $validated['village_id']);
+
         return redirect()
             ->route('admin.village-votes.index', ['year' => ElectionYear::find($validated['election_year_id'])?->year])
             ->with('status', 'Suara masuk desa berhasil disimpan.');
@@ -127,6 +132,9 @@ class VillageVoteSummaryController extends Controller
             'votes_cast' => $validated['votes_cast'],
         ]);
 
+        app(VoteAggregationService::class)
+            ->syncVillageAndAreaFromVillageId((int) $villageVote->election_year_id, (int) $villageVote->village_id);
+
         $year = ElectionYear::find($villageVote->election_year_id);
 
         return redirect()
@@ -137,7 +145,12 @@ class VillageVoteSummaryController extends Controller
     public function destroy(VillageVoteSummary $villageVote)
     {
         $year = ElectionYear::find($villageVote->election_year_id);
+        $electionYearId = (int) $villageVote->election_year_id;
+        $villageId = (int) $villageVote->village_id;
         $villageVote->delete();
+
+        app(VoteAggregationService::class)
+            ->syncVillageAndAreaFromVillageId($electionYearId, $villageId);
 
         return redirect()
             ->route('admin.village-votes.index', ['year' => $year?->year])

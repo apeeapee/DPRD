@@ -63,6 +63,29 @@
       <div class="muted">Silakan pilih <b>Kecamatan</b> lalu <b>Desa</b>.</div>
     @endif
 
+    @if($villageId)
+      <div style="display:flex; gap:10px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; margin: 10px 0 12px;">
+        <form method="POST" action="{{ route('admin.village-tps.store') }}" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+          @csrf
+          <input type="hidden" name="election_year_id" value="{{ $yearRow?->id }}" />
+          <input type="hidden" name="village_id" value="{{ $villageId }}" />
+
+          <div>
+            <div class="muted" style="font-size:12px; margin-bottom:6px;">Tambah TPS</div>
+            <input class="input" type="text" name="tps_code" placeholder="TPS 01" style="width:140px;" @disabled(!$yearRow) />
+          </div>
+          <div>
+            <div class="muted" style="font-size:12px; margin-bottom:6px;">Urutan</div>
+            <input class="input" type="number" min="0" name="sort_order" placeholder="0" style="width:100px; text-align:right;" @disabled(!$yearRow) />
+          </div>
+          <button type="submit" class="btn btn--primary" @disabled(!$yearRow)>Tambah</button>
+        </form>
+        <div class="muted" style="font-size:12px;">
+          Isi angka per TPS lalu klik <b>Simpan Suara TPS</b>.
+        </div>
+      </div>
+    @endif
+
     <div style="overflow:auto;" id="tpsGridWrap"></div>
   </div>
 @endsection
@@ -73,6 +96,11 @@
 
   const adminVillageId = @json($villageId);
   const adminYear = @json($year);
+  const adminElectionYearId = @json($yearRow?->id);
+  const adminSubdistrictId = @json($subdistrictId);
+  const csrf = @json(csrf_token());
+  const bulkSaveAction = @json(route('admin.village-tps-votes.bulk'));
+  const deleteTpsBase = @json(url('/admin/village-tps'));
   const tpsGridWrap = document.getElementById('tpsGridWrap');
   const tpsStatus = document.getElementById('tpsStatus');
 
@@ -101,11 +129,30 @@
     }
 
     const tpsCols = tps.map(x => ({ id: String(x.id), code: x.code }));
+
+    const actionQs = new URLSearchParams();
+    if (adminYear) actionQs.set('year', adminYear);
+    if (adminSubdistrictId) actionQs.set('subdistrict_id', adminSubdistrictId);
+    if (adminVillageId) actionQs.set('village_id', adminVillageId);
+    const actionSuffix = actionQs.toString() ? `?${actionQs.toString()}` : '';
+
     const header = `
       <tr>
         <th>Partai</th>
         <th>Caleg</th>
-        ${tpsCols.map(c => `<th>${c.code}</th>`).join('')}
+        ${tpsCols.map(c => `
+          <th style="min-width:120px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <div style="font-weight:900;">${c.code}</div>
+              <form method="POST" action="${deleteTpsBase}/${c.id}${actionSuffix}" onsubmit="return confirm('Hapus ${c.code}?')">
+                <input type="hidden" name="_token" value="${csrf}" />
+                <input type="hidden" name="_method" value="DELETE" />
+                <input type="hidden" name="election_year_id" value="${adminElectionYearId || ''}" />
+                <button type="submit" class="btn btn--danger" style="padding:6px 8px;" ${!adminElectionYearId ? 'disabled' : ''}>Hapus</button>
+              </form>
+            </div>
+          </th>
+        `).join('')}
         <th>Akumulasi</th>
       </tr>
     `;
@@ -122,8 +169,20 @@
           <tr>
             ${partyCell}
             <td>${c.candidate_name}</td>
-            ${tpsCols.map(col => `<td>${fmt.format(Number(votesByTps[col.id] || 0))}</td>`).join('')}
-            <td style="font-weight:800;">${fmt.format(Number(c.total || 0))}</td>
+            ${tpsCols.map(col => `
+              <td style="text-align:right;">
+                <input
+                  class="input"
+                  type="number"
+                  min="0"
+                  name="votes[${col.id}][${c.candidate_id}]"
+                  value="${Number(votesByTps[col.id] || 0)}"
+                  style="width:92px; text-align:right;"
+                  ${!adminElectionYearId ? 'disabled' : ''}
+                />
+              </td>
+            `).join('')}
+            <td style="font-weight:800; text-align:right;">${fmt.format(Number(c.total || 0))}</td>
           </tr>
         `);
       });
@@ -133,8 +192,8 @@
         <tr>
           <td style="font-weight:900;">${p.party_name}</td>
           <td style="font-weight:900;">TOTAL PARTAI</td>
-          ${tpsCols.map(col => `<td style="font-weight:900;">${fmt.format(Number(totalsByTps[col.id] || 0))}</td>`).join('')}
-          <td style="font-weight:900;">${fmt.format(Number(p.total || 0))}</td>
+          ${tpsCols.map(col => `<td style="font-weight:900; text-align:right;">${fmt.format(Number(totalsByTps[col.id] || 0))}</td>`).join('')}
+          <td style="font-weight:900; text-align:right;">${fmt.format(Number(p.total || 0))}</td>
         </tr>
       `);
     });
@@ -144,32 +203,55 @@
       <tr>
         <td style="font-weight:900;">TOTAL</td>
         <td style="font-weight:900;">SEMUA PARTAI</td>
-        ${tpsCols.map(col => `<td style="font-weight:900;">${fmt.format(Number(grandByTps[col.id] || 0))}</td>`).join('')}
-        <td style="font-weight:900;">${fmt.format(Number(data?.grand_total || 0))}</td>
+        ${tpsCols.map(col => `<td style="font-weight:900; text-align:right;">${fmt.format(Number(grandByTps[col.id] || 0))}</td>`).join('')}
+        <td style="font-weight:900; text-align:right;">${fmt.format(Number(data?.grand_total || 0))}</td>
       </tr>
     `);
 
     tpsGridWrap.innerHTML = `
-      <table>
-        <thead>${header}</thead>
-        <tbody>${bodyParts.join('')}</tbody>
-      </table>
+      <form method="POST" action="${bulkSaveAction}${actionSuffix}">
+        <input type="hidden" name="_token" value="${csrf}" />
+        <input type="hidden" name="election_year_id" value="${adminElectionYearId || ''}" />
+        <input type="hidden" name="village_id" value="${adminVillageId || ''}" />
+
+        <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end; margin: 0 0 10px;">
+          <button type="submit" class="btn btn--primary" ${!adminElectionYearId ? 'disabled' : ''}>Simpan Suara TPS</button>
+        </div>
+
+        <table>
+          <thead>${header}</thead>
+          <tbody>${bodyParts.join('')}</tbody>
+        </table>
+
+        <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end; margin: 10px 0 0;">
+          <button type="submit" class="btn btn--primary" ${!adminElectionYearId ? 'disabled' : ''}>Simpan Suara TPS</button>
+        </div>
+      </form>
     `;
   }
 
   async function loadAdminTpsGrid() {
     if (!adminVillageId || !tpsGridWrap) return;
     try {
-      if (tpsStatus) tpsStatus.textContent = 'Memuat…';
+      if (tpsStatus) {
+        tpsStatus.style.visibility = 'visible';
+        tpsStatus.textContent = 'Memuat…';
+      }
       const params = new URLSearchParams();
       params.set('year', adminYear || 2024);
       params.set('village_id', adminVillageId);
       const res = await fetch(`/api/village-tps-results?${params.toString()}`);
       const json = await res.json();
       renderTpsGrid(json.data);
-      if (tpsStatus) tpsStatus.textContent = 'OK';
+      if (tpsStatus) {
+        tpsStatus.textContent = '';
+        tpsStatus.style.visibility = 'hidden';
+      }
     } catch (e) {
-      if (tpsStatus) tpsStatus.textContent = 'Gagal memuat';
+      if (tpsStatus) {
+        tpsStatus.style.visibility = 'visible';
+        tpsStatus.textContent = 'Gagal memuat';
+      }
       tpsGridWrap.innerHTML = `<div class="muted">Gagal memuat detail TPS.</div>`;
     }
   }

@@ -4,16 +4,15 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Area;
-use App\Models\AreaCandidateResult;
 use App\Models\AreaElectionSummary;
-use App\Models\AreaPartyResult;
 use App\Models\Candidate;
 use App\Models\ElectionYear;
 use App\Models\Party;
+use App\Services\VoteAggregationService;
 
 class UserDashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, VoteAggregationService $voteAgg)
     {
         $year = 2024;
         $yearModel = ElectionYear::query()->where('year', $year)->first();
@@ -30,13 +29,13 @@ class UserDashboardController extends Controller
         $registered = 0;
         $votesCast = 0;
         if ($yearModel && $areaIds->isNotEmpty()) {
-            $agg = AreaElectionSummary::query()
+            $summaryAgg = AreaElectionSummary::query()
                 ->where('election_year_id', $yearModel->id)
                 ->whereIn('area_id', $areaIds)
                 ->selectRaw('COALESCE(SUM(registered_voters),0) as registered_voters, COALESCE(SUM(votes_cast),0) as votes_cast')
                 ->first();
-            $registered = (int) ($agg->registered_voters ?? 0);
-            $votesCast = (int) ($agg->votes_cast ?? 0);
+            $registered = (int) ($summaryAgg->registered_voters ?? 0);
+            $votesCast = (int) ($summaryAgg->votes_cast ?? 0);
         }
 
         $progressPct = $registered > 0 ? (int) round(($votesCast / $registered) * 100) : 0;
@@ -45,49 +44,20 @@ class UserDashboardController extends Controller
         // Party distribution (top 10)
         $partyChart = ['labels' => [], 'values' => []];
         if ($yearModel && $areaIds->isNotEmpty()) {
-            $partyAgg = AreaPartyResult::query()
-                ->where('election_year_id', $yearModel->id)
-                ->whereIn('area_id', $areaIds)
-                ->selectRaw('party_id, COALESCE(SUM(votes),0) as votes')
-                ->groupBy('party_id')
-                ->orderByDesc('votes')
-                ->limit(10)
-                ->get();
-
-            $partyNames = Party::query()
-                ->whereIn('id', $partyAgg->pluck('party_id'))
-                ->pluck('name', 'id');
-
-            $partyChart['labels'] = $partyAgg->map(fn ($r) => (string) ($partyNames[$r->party_id] ?? '—'))->values()->all();
-            $partyChart['values'] = $partyAgg->map(fn ($r) => (int) ($r->votes ?? 0))->values()->all();
+            $partyRows = $voteAgg->computePartyResultsFromTpsForRegencies($yearModel->id, $targets, 10);
+            $partyChart['labels'] = collect($partyRows)->map(fn ($r) => (string) ($r['party_name'] ?? '—'))->values()->all();
+            $partyChart['values'] = collect($partyRows)->map(fn ($r) => (int) ($r['votes'] ?? 0))->values()->all();
         }
 
         // Recent updates: top candidates (top 8)
         $recentCandidates = [];
         if ($yearModel && $areaIds->isNotEmpty()) {
-            $candAgg = AreaCandidateResult::query()
-                ->where('election_year_id', $yearModel->id)
-                ->whereIn('area_id', $areaIds)
-                ->selectRaw('candidate_id, COALESCE(SUM(votes),0) as votes')
-                ->groupBy('candidate_id')
-                ->orderByDesc('votes')
-                ->limit(8)
-                ->get();
-
-            $candidates = Candidate::query()
-                ->with('party:id,name')
-                ->whereIn('id', $candAgg->pluck('candidate_id'))
-                ->get(['id', 'name', 'party_id'])
-                ->keyBy('id');
-
-            $recentCandidates = $candAgg->map(function ($row) use ($candidates) {
-                $c = $candidates->get($row->candidate_id);
-                return [
-                    'name' => (string) ($c?->name ?? '—'),
-                    'party' => (string) ($c?->party?->name ?? '—'),
-                    'votes' => (int) ($row->votes ?? 0),
-                ];
-            })->values()->all();
+            $candRows = $voteAgg->computeCandidateResultsFromTpsForRegencies($yearModel->id, $targets, 8);
+            $recentCandidates = collect($candRows)->map(fn ($r) => [
+                'name' => (string) ($r['candidate_name'] ?? '—'),
+                'party' => (string) ($r['party_name'] ?? '—'),
+                'votes' => (int) ($r['votes'] ?? 0),
+            ])->values()->all();
         }
 
         $kpi = [
@@ -99,6 +69,44 @@ class UserDashboardController extends Controller
             'progress_pct' => $progressPct,
         ];
 
-        return view('user.dashboard', compact('kpi', 'partyChart', 'recentCandidates'));
+        // Top wilayah (real, based on votes_cast from summaries; top party derived from TPS)
+        $topRegions = [];
+        if ($yearModel && $areaIds->isNotEmpty()) {
+            $summaries = AreaElectionSummary::query()
+                ->where('election_year_id', $yearModel->id)
+                ->whereIn('area_id', $areaIds)
+                ->get(['area_id', 'registered_voters', 'votes_cast']);
+            $summaryByAreaId = $summaries->keyBy('area_id');
+
+            foreach ($areas as $area) {
+                $s = $summaryByAreaId->get($area->id);
+                $areaVotes = (int) ($s?->votes_cast ?? 0);
+
+                $topParty = null;
+                $partyRows = $voteAgg->computePartyResultsFromTpsForArea($yearModel->id, $area->id, 1);
+                if (!empty($partyRows)) {
+                    $topParty = (string) ($partyRows[0]['party_name'] ?? '—');
+                }
+
+                $topRegions[] = [
+                    'area_id' => (int) $area->id,
+                    'area_name' => (string) $area->name,
+                    'votes_cast' => $areaVotes,
+                    'top_party' => $topParty,
+                ];
+            }
+
+            usort($topRegions, fn ($a, $b) => ($b['votes_cast'] <=> $a['votes_cast']) ?: strcmp($a['area_name'], $b['area_name']));
+        }
+
+        $topPartyChips = collect($topRegions)
+            ->map(fn ($r) => (string) ($r['top_party'] ?? ''))
+            ->filter()
+            ->unique()
+            ->values()
+            ->take(4)
+            ->all();
+
+        return view('user.dashboard', compact('kpi', 'partyChart', 'recentCandidates', 'topRegions', 'topPartyChips'));
     }
 }

@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\VillageVoteSummaryController;
 use App\Http\Controllers\Admin\TpsVoteController;
 use App\Http\Controllers\Admin\PartyController;
 use App\Http\Controllers\Admin\CandidateController;
+use App\Http\Controllers\Admin\AreaDptController;
+use App\Http\Controllers\Admin\VillageTpsInlineController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -21,12 +23,22 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::view('/admin/dashboard', 'dashboard.index')->name('admin.dashboard');
 
     Route::prefix('admin')->name('admin.')->group(function () {
+        // Pengaturan DPT kabupaten
+        Route::get('/dpt', [AreaDptController::class, 'index'])->name('dpt.index');
+        Route::put('/dpt', [AreaDptController::class, 'update'])->name('dpt.update');
+        Route::post('/dpt/sync', [AreaDptController::class, 'sync'])->name('dpt.sync');
+
         Route::get('/suara-desa', [VillageVoteSummaryController::class, 'index'])->name('village-votes.index');
         Route::get('/suara-desa/create', [VillageVoteSummaryController::class, 'create'])->name('village-votes.create');
         Route::post('/suara-desa', [VillageVoteSummaryController::class, 'store'])->name('village-votes.store');
         Route::get('/suara-desa/{villageVote}/edit', [VillageVoteSummaryController::class, 'edit'])->name('village-votes.edit');
         Route::put('/suara-desa/{villageVote}', [VillageVoteSummaryController::class, 'update'])->name('village-votes.update');
         Route::delete('/suara-desa/{villageVote}', [VillageVoteSummaryController::class, 'destroy'])->name('village-votes.destroy');
+
+        // Inline TPS CRUD + bulk votes (dipakai di halaman Suara Masuk Desa)
+        Route::post('/village-tps', [VillageTpsInlineController::class, 'storeTps'])->name('village-tps.store');
+        Route::delete('/village-tps/{pollingStation}', [VillageTpsInlineController::class, 'destroyTps'])->name('village-tps.destroy');
+        Route::post('/village-tps-votes/bulk', [VillageTpsInlineController::class, 'bulkUpsertVotes'])->name('village-tps-votes.bulk');
 
         // Input suara per TPS
         Route::get('/suara-tps', [TpsVoteController::class, 'index'])->name('tps-votes.index');
