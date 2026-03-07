@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\Admin\VillageVoteSummaryController;
 use App\Http\Controllers\Admin\TpsVoteController;
+use App\Http\Controllers\Admin\TpsVotesImportController;
 use App\Http\Controllers\Admin\PartyController;
 use App\Http\Controllers\Admin\CandidateController;
 use App\Http\Controllers\Admin\AreaDptController;
@@ -38,7 +39,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
         // Inline TPS CRUD + bulk votes (dipakai di halaman Suara Masuk Desa)
         Route::post('/village-tps', [VillageTpsInlineController::class, 'storeTps'])->name('village-tps.store');
         Route::delete('/village-tps/{pollingStation}', [VillageTpsInlineController::class, 'destroyTps'])->name('village-tps.destroy');
-        Route::post('/village-tps-votes/bulk', [VillageTpsInlineController::class, 'bulkUpsertVotes'])->name('village-tps-votes.bulk');
+        Route::match(['POST', 'DELETE'], '/village-tps-votes/bulk', [VillageTpsInlineController::class, 'bulkUpsertVotes'])
+            ->name('village-tps-votes.bulk');
+
+        // Import suara TPS dari Excel (banyak sheet = banyak desa)
+        Route::get('/import/suara-tps', [TpsVotesImportController::class, 'index'])->name('import.tps-votes.index');
+        Route::post('/import/suara-tps', [TpsVotesImportController::class, 'store'])->name('import.tps-votes.store');
 
         // Input suara per TPS
         Route::get('/suara-tps', [TpsVoteController::class, 'index'])->name('tps-votes.index');

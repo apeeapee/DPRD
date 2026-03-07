@@ -41,6 +41,12 @@
 
         <button type="submit" class="area-popup__btn" style="width:auto; padding: 8px 12px;">Terapkan</button>
       </form>
+
+      <a
+        href="{{ route('admin.import.tps-votes.index', ['year' => $year, 'subdistrict_id' => $subdistrictId]) }}"
+        class="btn btn--primary"
+        style="text-decoration:none;"
+      >Import Excel Suara TPS</a>
     </div>
 
     @if (session('status'))
